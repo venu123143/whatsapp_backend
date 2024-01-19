@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Clone - OTP Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        #otpContainer {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 5px;
+        }
+
+        #otpDisplay {
+            font-size: 36px;
+            font-weight: bold;
+            color: #34b7f1;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        #otpDisplay:hover {
+            color: #3498db;
+        }
+
+        #copyIcon {
+            font-size: 20px;
+            margin-left: 5px;
+            cursor: pointer;
+            color: #3498db;
+            transition: color 0.3s;
+        }
+
+        #copyIcon:hover {
+            color: #2ecc71;
+        }
+
+        #goToAccount {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #emailContainer {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+
+        h2 {
+            color: #075e54;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        strong {
+            color: #34b7f1;
+        }
+
+        #validity {
+            font-weight: bold;
+            color: #e67e22;
+        }
+
+        #signature {
+            font-weight: bold;
+            color: #075e54;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="emailContainer">
+        <h2>Hi <%= name %>,</h2>
+
+        <p>Thank you for registering to our app, WhatsApp Clone!</p>
+        <p>Your OTP for account verification is:</p> 
+        <div id="otpContainer">
+            <strong id="otpDisplay" onclick="copyToClipboard()"><%= otp %></strong>
+            <span id="copyIcon" onclick="copyToClipboard()"><i class="fa fa-copy"></i></span>
+        </div>
+        
+        <p>Please use this OTP to complete your registration process. </p>
+
+        <p id="validity">This OTP is valid for the next 10 minutes.</p>
+
+        <p>If you did not initiate this registration, please ignore this email.</p>
+
+        <p id="signature">Thanks and Regards,<br>The WhatsApp Clone Team</p>
+        
+        <button type="button" id="goToAccount" onclick="verifyOTP()">Go to Account</button>
+
+    </div>
+
+
+    <script>
+        function copyToClipboard() {
+            var otpDisplay = document.getElementById("otpDisplay");
+            var textArea = document.createElement("textarea");
+            textArea.value = otpDisplay.innerText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+
+            var copiedMsg = document.createElement("span");
+            copiedMsg.innerHTML = "Copied..!";
+            copiedMsg.style.color = "#fff";
+            copiedMsg.style.backgroundColor = "#34495e";
+            copiedMsg.style.padding = "5px";
+            copiedMsg.style.borderRadius = "5px";
+            copiedMsg.style.display = "inline-block";
+
+            var parent = otpDisplay.parentNode;
+            parent.replaceChild(copiedMsg, otpDisplay);
+
+            setTimeout(function() {
+                parent.replaceChild(otpDisplay, copiedMsg);
+            }, 3000);
+        }
+
+        function verifyOTP() {
+            // You can add your logic here to verify the OTP and redirect to the user's account page.
+            // For demonstration purposes, it will simply display an alert.
+            alert("OTP verified! Redirecting to your account...");
+        }
+    </script>
+
+</body>
+</html>
