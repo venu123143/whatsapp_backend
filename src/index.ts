@@ -4,6 +4,7 @@ import cors, { CorsOptions } from "cors";
 import morgan from "morgan";
 import http from 'http'
 import { Server } from "socket.io";
+import { createClient } from "redis";
 
 
 // Handle uncaught Exception
@@ -23,10 +24,14 @@ import UserRouter from './routes/UserRoute'
 import MsgRouter from './routes/MessageRoute'
 import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
+import { authorizeUser, CustomSocket } from "./controllers/SocketController";
 
 const server = http.createServer(app)
 
-const io = new Server(server, { cors: { origin: "*", credentials: true } });
+export const redisClient = createClient()
+redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
+
+const io = new Server(server, { cors: { origin: "http://localhost:5173", credentials: true } });
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
@@ -42,17 +47,11 @@ app.use(morgan('dev'))
 // app.use(sessionMiddleware)
 io.use(socketMiddleware)
 
-// Middleware for socket authentication
-const userMap: any = {}
-console.log(userMap);
-io.on("connect", (socket) => {
+io.use(authorizeUser)
+io.on("connect", (socket: CustomSocket) => {
+    console.log(`user ${socket?.user}`);
     console.log(`user connected with socket id:- ${socket.id}`);
 
-    socket.on("user_login", (user: any) => {
-        console.log(user)
-        userMap[user] = socket.id
-    })
-    // console.log()
 })
 
 // controllers
