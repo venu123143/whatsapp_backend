@@ -24,7 +24,7 @@ import UserRouter from './routes/UserRoute'
 import MsgRouter from './routes/MessageRoute'
 import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
-import { authorizeUser, CustomSocket } from "./controllers/SocketController";
+import { authorizeUser, CustomSocket, userConnected, sendMessage, onDisconnect } from "./controllers/SocketController";
 
 const server = http.createServer(app)
 
@@ -46,12 +46,13 @@ app.use(cookieParser());
 app.use(morgan('dev'))
 // app.use(sessionMiddleware)
 io.use(socketMiddleware)
-
 io.use(authorizeUser)
 io.on("connect", (socket: CustomSocket) => {
-    console.log(`user ${socket?.user}`);
-    console.log(`user connected with socket id:- ${socket.id}`);
+    console.log(`user ${socket?.user.name} with ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
+    userConnected(socket)
+    socket.on("send_message", (data) => sendMessage(socket, data))
 
+    socket.on("disconnecting", () => onDisconnect(socket))
 })
 
 // controllers

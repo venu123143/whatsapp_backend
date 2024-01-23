@@ -15,7 +15,6 @@ import { ExtendedError } from 'socket.io/dist/namespace';
 
 export const socketMiddleware = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
     const loginToken: string = socket.handshake.auth.token;
-
     try {
         const decode = jwt.verify(loginToken, process.env.SECRET_KEY as jwt.Secret) as JwtPayload;
         const user = await User.findById(decode._id);
