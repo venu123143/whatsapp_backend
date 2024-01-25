@@ -1,8 +1,4 @@
 
-// session and redis
-// import session from 'express-session';
-// import { createClient } from "redis";
-// import RedisStore from "connect-redis";
 import { JwtPayload } from '../middleware/authMiddleware';
 import User, { IUser } from "../models/UserModel";
 import jwt from "jsonwebtoken"

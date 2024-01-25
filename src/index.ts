@@ -31,7 +31,7 @@ const server = http.createServer(app)
 export const redisClient = createClient()
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 
-const io = new Server(server, { cors: { origin: "http://localhost:5173", credentials: true } });
+const io = new Server(server, { cors: { origin: "http://localhost:5173", methods: ["GET", "POST"], credentials: true } });
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
@@ -48,10 +48,20 @@ app.use(morgan('dev'))
 io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", (socket: CustomSocket) => {
-    console.log(`user ${socket?.user.name} with ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
-    userConnected(socket)
-    socket.on("send_message", (data) => sendMessage(socket, data))
+    // console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
+    userConnected(io, socket)
+    socket.on('add_friend', (user) => {
+        console.log(`Received "add_friend" event from client: ${user}`);
+        // Handle the event logic here
+    });
+    socket.on("send_message", (data) => {
+        sendMessage(socket, data)
+    })
+    socket.on("change_staus", (data) => {
+        console.log("calling ", data);
 
+        socket.broadcast.emit("change", data)
+    })
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
