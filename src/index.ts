@@ -24,7 +24,11 @@ import UserRouter from './routes/UserRoute'
 import MsgRouter from './routes/MessageRoute'
 import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
-import { authorizeUser, CustomSocket, userConnected, sendMessage, onDisconnect } from "./controllers/SocketController";
+import {
+    authorizeUser, CustomSocket, userConnected,
+    sendMessage,
+    addFriend, onDisconnect, getFriends
+} from "./controllers/SocketController";
 
 const server = http.createServer(app)
 
@@ -47,13 +51,14 @@ app.use(morgan('dev'))
 // app.use(sessionMiddleware)
 io.use(socketMiddleware)
 io.use(authorizeUser)
-io.on("connect", (socket: CustomSocket) => {
-    // console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
+io.on("connect", async (socket: CustomSocket) => {
+    console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
     userConnected(io, socket)
     socket.on('add_friend', (user) => {
-        console.log(`Received "add_friend" event from client: ${user}`);
         // Handle the event logic here
+        addFriend(socket, user)
     });
+    // socket.emit('get_friends',)
     socket.on("send_message", (data) => {
         sendMessage(socket, data)
     })
