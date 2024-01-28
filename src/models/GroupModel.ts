@@ -9,7 +9,7 @@ export interface IGroup {
   maxUsers: number;
   profile: string;
   createdBy: Schema.Types.ObjectId;
-  chat: Array<any>;
+  chat: string[];
 }
 
 const groupSchema: Schema = new mongoose.Schema(

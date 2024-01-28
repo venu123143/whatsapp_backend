@@ -9,7 +9,9 @@ export interface IUser extends Document {
   otp?: string;
   profile?: string;
   refreshToken?: string;
+  lastMessage: string;
   loginType: string;
+  online_status: string;
   createdAt?: Date;
   updatedAt?: Date;
   chat: Array<any>;
@@ -41,6 +43,12 @@ const userSchema: Schema = new mongoose.Schema(
       type: String,
     },
     loginType: {
+      type: String,
+    },
+    online_status: {
+      type: String,
+    },
+    lastMessage: {
       type: String,
     },
     refreshToken: String,

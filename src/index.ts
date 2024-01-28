@@ -26,8 +26,8 @@ import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, userConnected,
-    sendMessage,
-    addFriend, onDisconnect, getFriends
+    sendMessage, createGroup,
+    addFriend, onDisconnect, onlineStatus
 } from "./controllers/SocketController";
 
 const server = http.createServer(app)
@@ -52,20 +52,19 @@ app.use(morgan('dev'))
 io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
-    console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected with socket id:- ${socket.id}`);
+    console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected`);
     userConnected(io, socket)
     socket.on('add_friend', (user) => {
-        // Handle the event logic here
         addFriend(socket, user)
     });
-    // socket.emit('get_friends',)
+    socket.on('online_status', (data) => {
+        onlineStatus(io, socket, data)
+    })
     socket.on("send_message", (data) => {
         sendMessage(socket, data)
     })
-    socket.on("change_staus", (data) => {
-        console.log("calling ", data);
-
-        socket.broadcast.emit("change", data)
+    socket.on("create_group", (group) => {
+        createGroup(io, socket, group)
     })
     socket.on("disconnecting", () => onDisconnect(socket))
 })

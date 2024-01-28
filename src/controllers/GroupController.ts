@@ -23,8 +23,16 @@ export const createGroup = async (req: Request, res: Response) => {
         profile: profile,
         admins: req.user?._id,
         createdBy: req.user?._id
-      });
-      res.status(201).json(group);
+      })
+
+      const populatedGroup = await Group.findById(group._id)
+        .populate([
+          { path: 'users', model: User },
+          { path: 'createdBy', model: User },
+          { path: 'admins', model: User },
+        ])
+        .exec();
+      res.status(201).json(populatedGroup);
     } else {
       res.status(400).json({ error: 'Number of users exceeds the limit' });
     }
