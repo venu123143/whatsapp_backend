@@ -64,7 +64,6 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
 //     });
 //     return friendList
 // }
-
 export const sendMessage = async (socket: CustomSocket, data: any) => {
     console.log(data);
     socket.to(data.recieverId).emit("recieve_message", data)
@@ -76,16 +75,26 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     await Promise.all(users.map(async (user: any) => {
         await redisClient.LPUSH(`friends:${user.socket_id}`, jsonStrngGrp);
     }));
-
+   
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
             const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
             // const isUserInRoom = await io.of('/').in(userSocketId).fetchSockets();
+            const msgObj = {
+                message: ` ${socket.user.name} added ${user.name} to the group`,
+                msgType: "notification",
+                conn_type: "group",
+                recieverId: group.socket_id,
+                date: new Date().toISOString(),
+                right: false,
+            }
             if (isUserInRoom) {
                 let userSocket = await io.to(userSocketId).fetchSockets();
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
+                    socket.to(group.socket_id).emit("recieve_message", msgObj)
+
                     console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
                 } else {
                     console.warn(`User with ID ${userSocketId} is not connected.`);
@@ -97,11 +106,24 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
             console.error("Error handling user:", error);
         }
     }
-    // Retrieve the list of groups for the current user
+
     const createdGroups = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
     const groupList = createdGroups?.map((each) => JSON.parse(each));
 
     socket.emit("get_friends", groupList)
+
+    const msgObj = {
+        message: `${group.name} group was created by ${socket.user.name} `,
+        msgType: "notification",
+        conn_type: "group",
+        recieverId: group.socket_id,
+        date: new Date().toISOString(),
+        right: false,
+    }
+    socket.to(group.socket_id).emit("recieve_message", msgObj)
+    // Retrieve the list of groups for the current user
+
+
 };
 
 export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => {
