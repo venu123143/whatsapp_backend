@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "CommonJS",
+    "baseUrl": "./src",
+    "outDir": "./dist",
+    "removeComments": true,
+    "moduleResolution": "Node",
+    "typeRoots": ["node_modules/@types", "src/types"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+
+}

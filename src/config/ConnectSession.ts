@@ -1,15 +1,17 @@
-
 import { JwtPayload } from '../middleware/authMiddleware';
 import User, { IUser } from "../models/UserModel";
 import jwt from "jsonwebtoken"
 import { CustomSocket } from "../controllers/SocketController"
-import { ExtendedError } from 'socket.io/dist/namespace';
+// import { ExtendedError } from 'socket.io/dist/namespace';
+// custom-typings/socket.io.d.ts
+
+
 // import MongoStore from "connect-mongo"
 // const store = MongoStore.create({ mongoUrl: process.env.MONGO_URL })
 
 
 
-export const socketMiddleware = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
+export const socketMiddleware = async (socket: CustomSocket, next: (err?: any | undefined) => void) => {
     const loginToken: string = socket.handshake.auth.token;
     try {
         const decode = jwt.verify(loginToken, process.env.SECRET_KEY as jwt.Secret) as JwtPayload;

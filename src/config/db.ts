@@ -1,7 +1,7 @@
 import mongoose from "mongoose"
-// const db = process.env.DATABASE
+const db = process.env.DATABASE
 
-const db = 'mongodb://127.0.0.1:27017/whatsappclone'
+// const db = 'mongodb://127.0.0.1:27017/whatsappclone'
 
 if (db !== undefined) {
     mongoose.connect(db)

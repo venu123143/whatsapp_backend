@@ -6,7 +6,8 @@ import FancyError from "../utils/FancyError";
 import { signUpSchema, loginSchema } from "../middleware/JoiSchemas"
 import jwtToken from "../utils/jwtToken";
 import asyncHandler from "express-async-handler"
-
+import { uploadImage, deleteImage } from "../utils/Cloudinary";
+import fs from "fs"
 const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 
 //joi validation
@@ -107,11 +108,19 @@ export const UpdateUser = asyncHandler(async (req: Request, res: Response) => {
 })
 
 export const updateProfile = async (req: Request, res: Response) => {
-  const profile =
-    "https://as2.ftcdn.net/v2/jpg/02/10/54/59/1000_F_210545946_H8K0CJih9ToRMqbBczgr2BLWJYcrNb1V.jpg";
   try {
-    const result = await User.updateMany({}, { profile }, { new: true });
-    res.json(result);
+    const uploader = (path: string) => uploadImage(path);
+    const files = req.files as Express.Multer.File[];
+    const id = req.params.id
+    let profile = ""
+    for (const file of files) {
+      const { path } = file;
+      const newpath = await uploader(path);
+      profile = newpath.url
+      fs.unlinkSync(path);
+    }
+    const result = await User.findOneAndUpdate({ _id: id }, { profile }, { new: true });
+    res.json(result)
   } catch (error: any) {
     throw new Error(error);
   }

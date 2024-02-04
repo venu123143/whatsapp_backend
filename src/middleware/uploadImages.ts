@@ -1,18 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, } from 'url';
 import { dirname } from 'path';
 import fs from 'fs'
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+
+
+// Get the directory name of the current file path
+const currentDirName = dirname(__filename);
 
 import sharp from "sharp"
 import path from "path"
-import FancyError from '../utils/FancyError.js';
+import FancyError from '../utils/FancyError';
+
+const destinationFolder = path.join(currentDirName, '../public/images');
+// Check if the destination folder exists, and create it if it doesn't
+if (!fs.existsSync(destinationFolder)) {
+    fs.mkdirSync(destinationFolder, { recursive: true });
+}
 
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/images'))
+        cb(null, destinationFolder);
     },
     filename: function (req, file, cb) {
         const uniqueSufix = Date.now() + '-' + Math.round(Math.random() * 1E9);

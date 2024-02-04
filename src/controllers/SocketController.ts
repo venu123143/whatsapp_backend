@@ -52,21 +52,21 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
         const parseUser = JSON.parse(each);
         return parseUser;
     });
-    // console.log("JsonFriend", friendList);
     socket.emit("get_friends", friendList)
 }
 
-// export const getFriends = async (socket: CustomSocket) => {
-//     const JsonFriend = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
-//     const friendList = JsonFriend?.map((each) => {
-//         const parseUser = JSON.parse(each);
-//         return parseUser;
-//     });
-//     return friendList
-// }
-export const sendMessage = async (socket: CustomSocket, data: any) => {
-    console.log(data);
-    socket.to(data.recieverId).emit("recieve_message", data)
+export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
+    try {
+        const receiverSocket = await io.to(data.recieverId).fetchSockets();
+        const senderIdSocket = await io.to(data.senderId).fetchSockets();        
+        if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
+            socket.to(data.recieverId).emit("recieve_message", data);
+        } else {
+            console.error(`Receiver socket with ID ${data.recieverId} not found.`);
+        }
+    } catch (error) {
+        console.error("Error sending message:", error);
+    }
 }
 export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     const jsonStrngGrp = JSON.stringify(group);
@@ -75,7 +75,7 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     await Promise.all(users.map(async (user: any) => {
         await redisClient.LPUSH(`friends:${user.socket_id}`, jsonStrngGrp);
     }));
-   
+
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;

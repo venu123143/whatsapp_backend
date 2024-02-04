@@ -54,16 +54,16 @@ io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected`);
     userConnected(io, socket)
-    socket.on('add_friend', (user) => {
+    socket.on('add_friend', (user: any) => {
         addFriend(socket, user)
     });
-    socket.on('online_status', (data) => {
+    socket.on('online_status', (data: any) => {
         onlineStatus(io, socket, data)
     })
-    socket.on("send_message", (data) => {
-        sendMessage(socket, data)
+    socket.on("send_message", (data: any) => {
+        sendMessage(io, socket, data)
     })
-    socket.on("create_group", (group) => {
+    socket.on("create_group", (group: any) => {
         createGroup(io, socket, group)
     })
     socket.on("disconnecting", () => onDisconnect(socket))
