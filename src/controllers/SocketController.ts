@@ -27,7 +27,7 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
 
 export const userConnected = async (io: IO, socket: CustomSocket) => {
     const rooms = io.sockets.adapter.rooms
-    console.log(rooms);
+    // console.log(rooms);
 
     const userSocket = rooms.get(socket.user.socket_id)
     console.log(`${socket.user.name} `, userSocket);

@@ -33,12 +33,18 @@ const MessageRoute_1 = __importDefault(require("./routes/MessageRoute"));
 const GroupRoute_1 = __importDefault(require("./routes/GroupRoute"));
 const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
+const admin_ui_1 = require("@socket.io/admin-ui");
 const server = http_1.default.createServer(app);
 exports.redisClient = (0, redis_1.createClient)();
 exports.redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err));
-const io = new socket_io_1.Server(server, { cors: { origin: "http://localhost:5173", methods: ["GET", "POST"], credentials: true } });
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: ["http://localhost:5173", "https://admin.socket.io"],
+        credentials: true,
+    }
+});
 const options = {
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:3000', "https://admin.socket.io", 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
 };
 app.use((0, cors_1.default)(options));
@@ -76,6 +82,7 @@ const port = process.env.PORT || 5000;
 let newServer = server.listen(port, () => {
     console.log(`server is running on port number ${port}`);
 });
+(0, admin_ui_1.instrument)(io, { auth: false });
 process.on("unhandledRejection", (err) => {
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);

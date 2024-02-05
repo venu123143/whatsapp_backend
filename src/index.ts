@@ -6,7 +6,6 @@ import http from 'http'
 import { Server } from "socket.io";
 import { createClient } from "redis";
 
-
 // Handle uncaught Exception
 process.on("uncaughtException", (err) => {
     console.log(`Error: ${err.message}`);
@@ -29,17 +28,23 @@ import {
     sendMessage, createGroup,
     addFriend, onDisconnect, onlineStatus
 } from "./controllers/SocketController";
+import { instrument } from "@socket.io/admin-ui"
 
 const server = http.createServer(app)
 
 export const redisClient = createClient()
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
+const io = new Server(server, {
+    cors: {
+        origin: ["http://localhost:5173", "https://admin.socket.io"],
+        credentials: true,
+    }
+});
 
-const io = new Server(server, { cors: { origin: "http://localhost:5173", methods: ["GET", "POST"], credentials: true } });
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:3000', "https://admin.socket.io", 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
 }
 
@@ -47,6 +52,7 @@ app.use(cors(options));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// app.use(express.static('../node_modules/@socket.io/admin-ui/ui/dist'))
 app.use(morgan('dev'))
 // app.use(sessionMiddleware)
 io.use(socketMiddleware)
@@ -69,6 +75,8 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
+
+
 // controllers
 app.get('/', (req, res) => {
     res.send('backend home route sucessful')
@@ -79,18 +87,14 @@ app.use("/api/msg", MsgRouter)
 app.use('/api/groups', groupRoutes);
 
 
-
-
-
 // Error handler and server port
 app.use(ErrorHandler)
-
 const port = process.env.PORT || 5000
 let newServer = server.listen(port, () => {
     console.log(`server is running on port number ${port}`);
 })
 
-
+instrument(io, { auth: false });
 // unhandled promise rejection
 process.on("unhandledRejection", (err: Error) => {
     console.log(`Shutting down the server for ${err.message}`);
