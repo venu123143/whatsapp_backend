@@ -34,31 +34,34 @@ export const userConnected = async (io: IO, socket: CustomSocket) => {
 }
 
 export const addFriend = async (socket: CustomSocket, user: any) => {
+    const friendListKey = `friends:${socket.user.socket_id}`;
     const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
-    // console.log("currFrndList", currFrndList);
-
-    const alreadExist = currFrndList?.filter((each) => JSON.parse(each).socket_id === user.socket_id)
+    const existingUserIndex = currFrndList.findIndex(each => {
+        const parsedUser = JSON.parse(each);
+        return parsedUser.socket_id === user.socket_id;
+    });
     const jsonStrngUser = JSON.stringify(user);
-    // console.log("user", jsonStrngUser);
-
-    // console.log("alread exist ", alreadExist);
-
-    if (alreadExist.length === 0) {
-        await redisClient.LPUSH(`friends:${socket.user.socket_id}`, jsonStrngUser);
+    if (existingUserIndex !== -1) {
+        await redisClient.LSET(friendListKey, existingUserIndex, jsonStrngUser);
+    } else {
+        await redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
     const JsonFriend = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
+    const friendList = JsonFriend?.map((each) => JSON.parse(each));
+    socket.emit("get_friends", friendList)
+}
+export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
+    console.log("calling get friends ");
 
-    const friendList = JsonFriend?.map((each) => {
-        const parseUser = JSON.parse(each);
-        return parseUser;
-    });
+    const currFrndList = await redisClient.lRange(`friends:${user.socket_id}`, 0, -1)
+    const friendList = currFrndList?.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList)
 }
 
 export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
     try {
         const receiverSocket = await io.to(data.recieverId).fetchSockets();
-        const senderIdSocket = await io.to(data.senderId).fetchSockets();        
+        const senderIdSocket = await io.to(data.senderId).fetchSockets();
         if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
             socket.to(data.recieverId).emit("recieve_message", data);
         } else {
@@ -80,7 +83,6 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
         try {
             const userSocketId = user.socket_id;
             const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
-            // const isUserInRoom = await io.of('/').in(userSocketId).fetchSockets();
             const msgObj = {
                 message: ` ${socket.user.name} added ${user.name} to the group`,
                 msgType: "notification",
@@ -135,4 +137,8 @@ export const onDisconnect = async (socket: CustomSocket) => {
     console.log("disconnecting.");
     await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
 
+}
+export const updateSeen = async (socket: CustomSocket, user: any) => {
+    user.seen = true;
+    socket.to(user.senderId).emit("update_view", user)
 }

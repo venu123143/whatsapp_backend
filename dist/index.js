@@ -60,6 +60,9 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     socket.on('add_friend', (user) => {
         (0, SocketController_1.addFriend)(socket, user);
     });
+    socket.on('get_frnds_on_reload', (user) => {
+        (0, SocketController_1.getFriends)(socket, io, user);
+    });
     socket.on('online_status', (data) => {
         (0, SocketController_1.onlineStatus)(io, socket, data);
     });
@@ -68,6 +71,9 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     });
     socket.on("create_group", (group) => {
         (0, SocketController_1.createGroup)(io, socket, group);
+    });
+    socket.on("update_seen", (msg) => {
+        (0, SocketController_1.updateSeen)(socket, msg);
     });
     socket.on("disconnecting", () => (0, SocketController_1.onDisconnect)(socket));
 }));

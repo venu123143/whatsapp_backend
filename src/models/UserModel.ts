@@ -9,8 +9,9 @@ export interface IUser extends Document {
   otp?: string;
   profile?: string;
   refreshToken?: string;
-  lastMessage: string;
+  lastMessage: any;
   loginType: string;
+  status: string;
   online_status: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -45,11 +46,16 @@ const userSchema: Schema = new mongoose.Schema(
     loginType: {
       type: String,
     },
+    status: {
+      type: String,
+    },
     online_status: {
       type: String,
     },
     lastMessage: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null
     },
     refreshToken: String,
     chat: [

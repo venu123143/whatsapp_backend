@@ -25,7 +25,7 @@ import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, userConnected,
-    sendMessage, createGroup,
+    sendMessage, createGroup, updateSeen, getFriends,
     addFriend, onDisconnect, onlineStatus
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
@@ -63,6 +63,9 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on('add_friend', (user: any) => {
         addFriend(socket, user)
     });
+    socket.on('get_frnds_on_reload', (user) => {
+        getFriends(socket, io, user)
+    })
     socket.on('online_status', (data: any) => {
         onlineStatus(io, socket, data)
     })
@@ -71,6 +74,9 @@ io.on("connect", async (socket: CustomSocket) => {
     })
     socket.on("create_group", (group: any) => {
         createGroup(io, socket, group)
+    })
+    socket.on("update_seen", (msg) => {
+        updateSeen(socket, msg)
     })
     socket.on("disconnecting", () => onDisconnect(socket))
 })

@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.addFriend = exports.userConnected = exports.authorizeUser = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.userConnected = exports.authorizeUser = void 0;
 const index_1 = require("../index");
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
     if (!socket.user) {
@@ -30,26 +30,36 @@ const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, functi
 exports.authorizeUser = authorizeUser;
 const userConnected = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
     const rooms = io.sockets.adapter.rooms;
-    console.log(rooms);
     const userSocket = rooms.get(socket.user.socket_id);
     console.log(`${socket.user.name} `, userSocket);
 });
 exports.userConnected = userConnected;
 const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* () {
+    const friendListKey = `friends:${socket.user.socket_id}`;
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const alreadExist = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.filter((each) => JSON.parse(each).socket_id === user.socket_id);
+    const existingUserIndex = currFrndList.findIndex(each => {
+        const parsedUser = JSON.parse(each);
+        return parsedUser.socket_id === user.socket_id;
+    });
     const jsonStrngUser = JSON.stringify(user);
-    if (alreadExist.length === 0) {
-        yield index_1.redisClient.LPUSH(`friends:${socket.user.socket_id}`, jsonStrngUser);
+    if (existingUserIndex !== -1) {
+        yield index_1.redisClient.LSET(friendListKey, existingUserIndex, jsonStrngUser);
+    }
+    else {
+        yield index_1.redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
     const JsonFriend = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const friendList = JsonFriend === null || JsonFriend === void 0 ? void 0 : JsonFriend.map((each) => {
-        const parseUser = JSON.parse(each);
-        return parseUser;
-    });
+    const friendList = JsonFriend === null || JsonFriend === void 0 ? void 0 : JsonFriend.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList);
 });
 exports.addFriend = addFriend;
+const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("calling get friends ");
+    const currFrndList = yield index_1.redisClient.lRange(`friends:${user.socket_id}`, 0, -1);
+    const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
+    socket.emit("get_friends", friendList);
+});
+exports.getFriends = getFriends;
 const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const receiverSocket = yield io.to(data.recieverId).fetchSockets();
@@ -128,3 +138,8 @@ const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () 
     yield index_1.redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" });
 });
 exports.onDisconnect = onDisconnect;
+const updateSeen = (socket, user) => __awaiter(void 0, void 0, void 0, function* () {
+    user.seen = true;
+    socket.to(user.senderId).emit("update_view", user);
+});
+exports.updateSeen = updateSeen;

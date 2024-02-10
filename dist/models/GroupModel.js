@@ -33,6 +33,10 @@ const groupSchema = new mongoose_1.default.Schema({
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: "User"
     },
+    lastMessage: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: "Message"
+    },
     chat: [
         {
             type: mongoose_1.default.Schema.Types.ObjectId,

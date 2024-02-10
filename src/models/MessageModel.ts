@@ -1,35 +1,67 @@
-import { string } from "joi";
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IMessage {
+export interface IChatMessage extends Document {
     message: string;
-    msg_type: string;
-    seen: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
+    date: Date;
+    right: boolean;
+    msgType: string;
     senderId: string;
-    recieverId: string;
+    image: any;
+    conn_type: string;
+    seen:boolean;
+    receiverId: string;
 }
-
-const messageSchema: Schema = new mongoose.Schema({
+// Define enum for connection types
+enum ConnectionType {
+    Group = "group",
+    OneToOne = "onetoone"
+}
+// Define enum for message types
+enum MessageType {
+    Text = "text",
+    Image = "image",
+    Video = "video",
+    Notification = "notification"
+}
+const chatMessageSchema: Schema = new mongoose.Schema({
     message: {
         type: String,
-        default: ""
+        required: true,
+        default: ''
     },
-    msg_type: String,
-    seen: {
+    date: {
+        type: Date,
+        required: true
+    },
+    right: {
         type: Boolean,
-        default: false
+        required: true
+    },
+    msgType: {
+        type: String,
+        required: true,
+        enum: Object.values(MessageType),
     },
     senderId: {
         type: String,
         required: true
     },
-    recieverId: {
+    conn_type: {
+        type: String,
+        required: true,
+        enum: Object.values(ConnectionType),
+    },
+    receiverId: {
         type: String,
         required: true
     },
+    image: {
+        type: String,
+    },
+    seen: {
+        type: Boolean,
+        required: true,
+    }
+});
 
-}, { collection: "message", timestamps: true, versionKey: false, })
-
-export default mongoose.model<IMessage>("Message", messageSchema);
+export default mongoose.model<IChatMessage>("ChatMessage", chatMessageSchema);

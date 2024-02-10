@@ -4,23 +4,56 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
-const messageSchema = new mongoose_1.default.Schema({
+var ConnectionType;
+(function (ConnectionType) {
+    ConnectionType["Group"] = "group";
+    ConnectionType["OneToOne"] = "onetoone";
+})(ConnectionType || (ConnectionType = {}));
+var MessageType;
+(function (MessageType) {
+    MessageType["Text"] = "text";
+    MessageType["Image"] = "image";
+    MessageType["Video"] = "video";
+    MessageType["Notification"] = "notification";
+})(MessageType || (MessageType = {}));
+const chatMessageSchema = new mongoose_1.default.Schema({
     message: {
         type: String,
-        default: ""
+        required: true,
+        default: ''
     },
-    msg_type: String,
-    seen: {
+    date: {
+        type: Date,
+        required: true
+    },
+    right: {
         type: Boolean,
-        default: false
+        required: true
+    },
+    msgType: {
+        type: String,
+        required: true,
+        enum: Object.values(MessageType),
     },
     senderId: {
         type: String,
         required: true
     },
-    recieverId: {
+    conn_type: {
+        type: String,
+        required: true,
+        enum: Object.values(ConnectionType),
+    },
+    receiverId: {
         type: String,
         required: true
     },
-}, { collection: "message", timestamps: true, versionKey: false, });
-exports.default = mongoose_1.default.model("Message", messageSchema);
+    image: {
+        type: String,
+    },
+    seen: {
+        type: Boolean,
+        required: true,
+    }
+});
+exports.default = mongoose_1.default.model("ChatMessage", chatMessageSchema);

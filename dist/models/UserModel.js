@@ -39,11 +39,16 @@ const userSchema = new mongoose_1.default.Schema({
     loginType: {
         type: String,
     },
+    status: {
+        type: String,
+    },
     online_status: {
         type: String,
     },
     lastMessage: {
-        type: String,
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null
     },
     refreshToken: String,
     chat: [
