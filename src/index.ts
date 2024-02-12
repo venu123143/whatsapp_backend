@@ -26,13 +26,15 @@ import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, userConnected,
     sendMessage, createGroup, updateSeen, getFriends,
-    addFriend, onDisconnect, onlineStatus
+    addFriend, onDisconnect, onlineStatus,
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
 
 const server = http.createServer(app)
 
-export const redisClient = createClient()
+export const redisClient = createClient({url: "rediss://default:AVNS_tO13lSwj5olzoIwGzr_@redis-2f06db57-venugopalreddy9493-1aec.a.aivencloud.com:23068",});
+
+
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 const io = new Server(server, {
     cors: {

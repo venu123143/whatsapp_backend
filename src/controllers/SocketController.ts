@@ -51,8 +51,6 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
     socket.emit("get_friends", friendList)
 }
 export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
-    console.log("calling get friends ");
-
     const currFrndList = await redisClient.lRange(`friends:${user.socket_id}`, 0, -1)
     const friendList = currFrndList?.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList)

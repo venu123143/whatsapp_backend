@@ -35,7 +35,7 @@ const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
 const admin_ui_1 = require("@socket.io/admin-ui");
 const server = http_1.default.createServer(app);
-exports.redisClient = (0, redis_1.createClient)();
+exports.redisClient = (0, redis_1.createClient)({ url: "rediss://default:AVNS_tO13lSwj5olzoIwGzr_@redis-2f06db57-venugopalreddy9493-1aec.a.aivencloud.com:23068", });
 exports.redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err));
 const io = new socket_io_1.Server(server, {
     cors: {

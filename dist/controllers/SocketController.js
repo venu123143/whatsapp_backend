@@ -54,7 +54,6 @@ const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.addFriend = addFriend;
 const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("calling get friends ");
     const currFrndList = yield index_1.redisClient.lRange(`friends:${user.socket_id}`, 0, -1);
     const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList);
