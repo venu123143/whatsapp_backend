@@ -32,7 +32,7 @@ import { instrument } from "@socket.io/admin-ui"
 
 const server = http.createServer(app)
 
-export const redisClient = createClient({url: "rediss://default:AVNS_tO13lSwj5olzoIwGzr_@redis-2f06db57-venugopalreddy9493-1aec.a.aivencloud.com:23068",});
+export const redisClient = createClient({ url: process.env.REDIS_URL });
 
 
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
@@ -46,7 +46,7 @@ const io = new Server(server, {
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:3000', "https://admin.socket.io", 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
 }
 
