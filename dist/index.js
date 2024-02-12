@@ -55,7 +55,6 @@ app.use((0, morgan_1.default)('dev'));
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`socket connected with socket id:- ${socket.id}`);
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${socket.user.socket_id} is connected`);
     (0, SocketController_1.userConnected)(io, socket);
     socket.on('add_friend', (user) => {
