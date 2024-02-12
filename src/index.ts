@@ -38,11 +38,10 @@ export const redisClient = createClient({ url: process.env.REDIS_URL });
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173",'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
+        origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
         credentials: true,
     }
 });
-
 
 // cors, json and cookie-parser
 const options: CorsOptions = {

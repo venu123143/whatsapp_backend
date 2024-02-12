@@ -35,16 +35,16 @@ const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
 const admin_ui_1 = require("@socket.io/admin-ui");
 const server = http_1.default.createServer(app);
-exports.redisClient = (0, redis_1.createClient)({ url: "rediss://default:AVNS_tO13lSwj5olzoIwGzr_@redis-2f06db57-venugopalreddy9493-1aec.a.aivencloud.com:23068", });
+exports.redisClient = (0, redis_1.createClient)({ url: process.env.REDIS_URL });
 exports.redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err));
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "https://admin.socket.io"],
+        origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
         credentials: true,
     }
 });
 const options = {
-    origin: ['http://localhost:3000', "https://admin.socket.io", 'http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
 };
 app.use((0, cors_1.default)(options));
@@ -55,6 +55,7 @@ app.use((0, morgan_1.default)('dev'));
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`socket connected with socket id:- ${socket.id}`);
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${socket.user.socket_id} is connected`);
     (0, SocketController_1.userConnected)(io, socket);
     socket.on('add_friend', (user) => {
