@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.userConnected = exports.authorizeUser = void 0;
+exports.getAllMessages = exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.userConnected = exports.authorizeUser = void 0;
 const index_1 = require("../index");
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
     if (!socket.user) {
@@ -60,15 +60,23 @@ const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getFriends = getFriends;
 const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
+    const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
+    const senderMsg = JSON.stringify(data);
+    const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, data), { right: false }));
     try {
         const receiverSocket = yield io.to(data.recieverId).fetchSockets();
         const senderIdSocket = yield io.to(data.senderId).fetchSockets();
         if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
+            yield index_1.redisClient.LPUSH(senderKey, senderMsg);
+            yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
             socket.to(data.recieverId).emit("recieve_message", data);
         }
         else {
             console.error(`Receiver socket with ID ${data.recieverId} not found.`);
         }
+        const JsonFriend = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        console.log(JsonFriend);
     }
     catch (error) {
         console.error("Error sending message:", error);
@@ -135,6 +143,7 @@ exports.onlineStatus = onlineStatus;
 const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("disconnecting.");
     yield index_1.redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" });
+    socket.user = null;
 });
 exports.onDisconnect = onDisconnect;
 const updateSeen = (socket, user) => __awaiter(void 0, void 0, void 0, function* () {
@@ -142,3 +151,22 @@ const updateSeen = (socket, user) => __awaiter(void 0, void 0, void 0, function*
     socket.to(user.senderId).emit("update_view", user);
 });
 exports.updateSeen = updateSeen;
+const getAllMessages = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("calling");
+    const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
+    console.log(currFrndList);
+    const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
+    console.log(friendList);
+    const res = yield friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
+        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
+        const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each));
+        const lastMessageIndex = curr_chat.length - 1;
+        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
+        console.log(userChat, curr_chat, lastMessage);
+        return Object.assign(Object.assign({}, friend), { chat: curr_chat, last_message: lastMessage });
+    }));
+    console.log(res);
+    socket.emit("get_all_messages_on_reload", res);
+});
+exports.getAllMessages = getAllMessages;

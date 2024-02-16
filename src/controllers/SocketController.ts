@@ -41,6 +41,7 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
         return parsedUser.socket_id === user.socket_id;
     });
     const jsonStrngUser = JSON.stringify(user);
+
     if (existingUserIndex !== -1) {
         await redisClient.LSET(friendListKey, existingUserIndex, jsonStrngUser);
     } else {
@@ -57,14 +58,25 @@ export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
 }
 
 export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
+    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
+    const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
+
+    const senderMsg = JSON.stringify(data);
+    const recieverMsg = JSON.stringify({ ...data, right: false });
     try {
         const receiverSocket = await io.to(data.recieverId).fetchSockets();
         const senderIdSocket = await io.to(data.senderId).fetchSockets();
         if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
+            await redisClient.LPUSH(senderKey, senderMsg);
+            await redisClient.LPUSH(recieverKey, recieverMsg);
             socket.to(data.recieverId).emit("recieve_message", data);
+
         } else {
             console.error(`Receiver socket with ID ${data.recieverId} not found.`);
         }
+        const JsonFriend = await redisClient.lRange(senderKey, 0, -1)
+        console.log(JsonFriend);
+
     } catch (error) {
         console.error("Error sending message:", error);
     }
@@ -122,8 +134,6 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     }
     socket.to(group.socket_id).emit("recieve_message", msgObj)
     // Retrieve the list of groups for the current user
-
-
 };
 
 export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => {
@@ -134,9 +144,34 @@ export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => 
 export const onDisconnect = async (socket: CustomSocket) => {
     console.log("disconnecting.");
     await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
-
+    socket.user = null;
 }
 export const updateSeen = async (socket: CustomSocket, user: any) => {
     user.seen = true;
     socket.to(user.senderId).emit("update_view", user)
+}
+
+export const getAllMessages = async (io: IO, socket: CustomSocket) => {
+    console.log("calling");
+
+    const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
+    console.log(currFrndList);
+
+    const friendList = currFrndList?.map((each) => JSON.parse(each));
+    console.log(friendList);
+
+    const res = await friendList.map(async (friend: any) => {
+        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
+        const userChat = await redisClient.lRange(senderKey, 0, -1)
+        const curr_chat = userChat?.map((each) => JSON.parse(each));
+        const lastMessageIndex = curr_chat.length - 1;
+        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
+        console.log(userChat, curr_chat, lastMessage);
+
+        return { ...friend, chat: curr_chat, last_message: lastMessage }
+    })
+    console.log(res);
+
+    socket.emit("get_all_messages_on_reload", res)
+
 }

@@ -55,7 +55,8 @@ app.use((0, morgan_1.default)('dev'));
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${socket.user.socket_id} is connected`);
+    var _a;
+    console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);
     (0, SocketController_1.userConnected)(io, socket);
     socket.on('add_friend', (user) => {
         (0, SocketController_1.addFriend)(socket, user);
@@ -68,6 +69,9 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     });
     socket.on("send_message", (data) => {
         (0, SocketController_1.sendMessage)(io, socket, data);
+    });
+    socket.on("get_all_messages", () => {
+        (0, SocketController_1.getAllMessages)(io, socket);
     });
     socket.on("create_group", (group) => {
         (0, SocketController_1.createGroup)(io, socket, group);

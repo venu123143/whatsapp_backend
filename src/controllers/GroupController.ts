@@ -1,6 +1,6 @@
 import Group from '../models/GroupModel'
 import User from '../models/UserModel'
-import Message, { IMessage } from '../models/MessageModel'
+import Message, { IChatMessage } from '../models/MessageModel'
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from 'uuid';
 import fs from "fs"
@@ -206,7 +206,7 @@ export const backupMessages = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No messages found for the group' });
     }
 
-    const backupData: IMessage[] = messages.map((message) => {
+    const backupData = messages.map((message:any) => {
       return {
         message: message.message,
         msg_type: message.msg_type,

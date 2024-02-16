@@ -22,6 +22,5 @@ export const socketMiddleware = async (socket: CustomSocket, next: (err?: any | 
         next(new Error("Socket Connection Failed, Try again."));
     }
 
-
 }
 

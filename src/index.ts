@@ -26,7 +26,7 @@ import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, userConnected,
     sendMessage, createGroup, updateSeen, getFriends,
-    addFriend, onDisconnect, onlineStatus,
+    addFriend, onDisconnect, onlineStatus, getAllMessages
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
 
@@ -59,7 +59,7 @@ app.use(morgan('dev'))
 io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
-    console.log(`user ${socket?.user.name} with UUID:- ${socket.user.socket_id} is connected`);
+    console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
     userConnected(io, socket)
     socket.on('add_friend', (user: any) => {
         addFriend(socket, user)
@@ -72,6 +72,9 @@ io.on("connect", async (socket: CustomSocket) => {
     })
     socket.on("send_message", (data: any) => {
         sendMessage(io, socket, data)
+    })
+    socket.on("get_all_messages", () => {
+        getAllMessages(io, socket)
     })
     socket.on("create_group", (group: any) => {
         createGroup(io, socket, group)
@@ -100,7 +103,6 @@ const port = process.env.PORT || 5000
 let newServer = server.listen(port, () => {
     console.log(`server is running on port number ${port}`);
 })
-
 instrument(io, { auth: false });
 // unhandled promise rejection
 process.on("unhandledRejection", (err: Error) => {
