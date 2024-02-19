@@ -159,7 +159,21 @@ export const getAllMessages = async (io: IO, socket: CustomSocket) => {
         const curr_chat = userChat?.map((each) => JSON.parse(each));
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
-        return { ...friend, chat: curr_chat, last_message: lastMessage };
+        return { ...friend, chat: curr_chat, lastMessage: lastMessage };
     }));
-    socket.emit("get_all_messages_on_reload", res);
+    // Sort the result by the date of the last message
+    const sortedRes = res.sort((a, b) => {
+        const lastMessageA = a.lastMessage;
+        const lastMessageB = b.lastMessage;
+        if (!lastMessageA && !lastMessageB) {
+            return 0;
+        } else if (!lastMessageA) {
+            return 1;
+        } else if (!lastMessageB) {
+            return -1;
+        } else {
+            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
+        }
+    });
+    socket.emit("get_all_messages_on_reload", sortedRes);
 }

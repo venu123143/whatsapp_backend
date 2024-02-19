@@ -161,8 +161,24 @@ const getAllMessages = (io, socket) => __awaiter(void 0, void 0, void 0, functio
         const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each));
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
-        return Object.assign(Object.assign({}, friend), { chat: curr_chat, last_message: lastMessage });
+        return Object.assign(Object.assign({}, friend), { chat: curr_chat, lastMessage: lastMessage });
     })));
-    socket.emit("get_all_messages_on_reload", res);
+    const sortedRes = res.sort((a, b) => {
+        const lastMessageA = a.lastMessage;
+        const lastMessageB = b.lastMessage;
+        if (!lastMessageA && !lastMessageB) {
+            return 0;
+        }
+        else if (!lastMessageA) {
+            return 1;
+        }
+        else if (!lastMessageB) {
+            return -1;
+        }
+        else {
+            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
+        }
+    });
+    socket.emit("get_all_messages_on_reload", sortedRes);
 });
 exports.getAllMessages = getAllMessages;
