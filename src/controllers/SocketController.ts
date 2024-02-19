@@ -25,12 +25,15 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
     }
 };
 
-export const userConnected = async (io: IO, socket: CustomSocket) => {
-    const rooms = io.sockets.adapter.rooms
+export const flushAllData = async (io: IO, socket: CustomSocket) => {
+    // const rooms = io.sockets.adapter.rooms
     // console.log(rooms);
-
-    const userSocket = rooms.get(socket?.user?.socket_id)
-    console.log(`${socket.user.name} `, userSocket);
+    try {
+        await redisClient.flushAll()
+        console.log("All data flushed successfully.");
+    } catch (error) {
+        console.error("Error flushing data:", error);
+    }
 }
 
 export const addFriend = async (socket: CustomSocket, user: any) => {

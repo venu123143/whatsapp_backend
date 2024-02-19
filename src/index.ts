@@ -24,7 +24,7 @@ import MsgRouter from './routes/MessageRoute'
 import groupRoutes from './routes/GroupRoute'
 import { socketMiddleware } from "./config/ConnectSession"
 import {
-    authorizeUser, CustomSocket, userConnected,
+    authorizeUser, CustomSocket, flushAllData,
     sendMessage, createGroup, updateSeen, getFriends,
     addFriend, onDisconnect, onlineStatus, getAllMessages
 } from "./controllers/SocketController";
@@ -58,7 +58,7 @@ io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
-    // userConnected(io, socket)
+    // flushAllData(io, socket)
     socket.on('add_friend', (user: any) => {
         addFriend(socket, user)
     });
@@ -82,7 +82,6 @@ io.on("connect", async (socket: CustomSocket) => {
     })
     socket.on("disconnecting", () => onDisconnect(socket))
 })
-
 
 
 // controllers

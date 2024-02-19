@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllMessages = exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.userConnected = exports.authorizeUser = void 0;
+exports.getAllMessages = exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = void 0;
 const index_1 = require("../index");
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d;
@@ -29,13 +29,16 @@ const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.authorizeUser = authorizeUser;
-const userConnected = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
-    const rooms = io.sockets.adapter.rooms;
-    const userSocket = rooms.get((_e = socket === null || socket === void 0 ? void 0 : socket.user) === null || _e === void 0 ? void 0 : _e.socket_id);
-    console.log(`${socket.user.name} `, userSocket);
+const flushAllData = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield index_1.redisClient.flushAll();
+        console.log("All data flushed successfully.");
+    }
+    catch (error) {
+        console.error("Error flushing data:", error);
+    }
 });
-exports.userConnected = userConnected;
+exports.flushAllData = flushAllData;
 const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* () {
     const friendListKey = `friends:${socket.user.socket_id}`;
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
