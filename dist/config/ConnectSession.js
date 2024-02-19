@@ -16,6 +16,7 @@ exports.socketMiddleware = void 0;
 const UserModel_1 = __importDefault(require("../models/UserModel"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const socketMiddleware = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("handshake token");
     const loginToken = socket.handshake.auth.token;
     try {
         const decode = jsonwebtoken_1.default.verify(loginToken, process.env.SECRET_KEY);

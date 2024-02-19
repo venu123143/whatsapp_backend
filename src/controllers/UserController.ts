@@ -29,20 +29,26 @@ export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) =>
   await signUpSchema.validateAsync(req.body)
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   try {
-    const user = await User.findOneAndUpdate(
-      { mobile },
-      { mobile, otp, socket_id: uuidv4() },
-      { upsert: true, new: true }
-    );
+    let user = await User.findOne({ mobile });
+    if (!user) {
+      user = await User.create({ mobile, otp, socket_id: uuidv4() });
+    } else {
+      user = await User.findOneAndUpdate(
+        { mobile },
+        { $set: { otp } },
+        { new: true }
+      );
+    }
     // const msg = sendTextMessage(mobile, otp)
     res.status(200).json({
-      user, success: true, message: `Verification code ${user.otp} sent to ${mobile}, Valid for next 10 mins. `,
+      user, success: true, message: `Verification code ${user?.otp} sent to ${mobile}, Valid for next 10 mins. `,
     });
   } catch (error) {
     console.log(error);
     throw new FancyError("Incorrect Number or Invalid Number.", 500)
   }
 })
+
 
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const curOTP = req.body?.otp;
@@ -87,9 +93,6 @@ export const UpdateUser = asyncHandler(async (req: Request, res: Response) => {
   const name = req.body?.name;
   const about = req.body?.about;
   const profile = req.body?.profile;
-  const socket_id = req.body.socket_id;
-  console.log(_id, name, about);
-
   try {
     const updatedUser = await User.findOneAndUpdate(
       { _id: _id },
@@ -97,7 +100,6 @@ export const UpdateUser = asyncHandler(async (req: Request, res: Response) => {
         name,
         profile,
         about,
-        socket_id
       },
       { new: true }
     );

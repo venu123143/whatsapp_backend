@@ -34,7 +34,6 @@ const server = http.createServer(app)
 
 export const redisClient = createClient({ url: process.env.REDIS_URL });
 
-
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 const io = new Server(server, {
     cors: {
@@ -48,7 +47,6 @@ const options: CorsOptions = {
     origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
 }
-
 app.use(cors(options));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -60,7 +58,7 @@ io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
-    userConnected(io, socket)
+    // userConnected(io, socket)
     socket.on('add_friend', (user: any) => {
         addFriend(socket, user)
     });
@@ -105,7 +103,7 @@ let newServer = server.listen(port, () => {
 })
 instrument(io, { auth: false });
 // unhandled promise rejection
-process.on("unhandledRejection", (err: Error) => {
+process.on("unhandledRejection", (err: Error) => {    
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);
     newServer.close(() => {

@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 
 export interface IUser extends Document {
   name?: string;
-  socket_id?: string;
+  socket_id: string;
   about?: string;
   mobile: string;
   otp?: string;

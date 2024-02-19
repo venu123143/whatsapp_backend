@@ -42,9 +42,15 @@ exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awa
     yield JoiSchemas_1.signUpSchema.validateAsync(req.body);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     try {
-        const user = yield UserModel_1.default.findOneAndUpdate({ mobile }, { mobile, otp, socket_id: (0, uuid_1.v4)() }, { upsert: true, new: true });
+        let user = yield UserModel_1.default.findOne({ mobile });
+        if (!user) {
+            user = yield UserModel_1.default.create({ mobile, otp, socket_id: (0, uuid_1.v4)() });
+        }
+        else {
+            user = yield UserModel_1.default.findOneAndUpdate({ mobile }, { $set: { otp } }, { new: true });
+        }
         res.status(200).json({
-            user, success: true, message: `Verification code ${user.otp} sent to ${mobile}, Valid for next 10 mins. `,
+            user, success: true, message: `Verification code ${user === null || user === void 0 ? void 0 : user.otp} sent to ${mobile}, Valid for next 10 mins. `,
         });
     }
     catch (error) {
@@ -90,14 +96,11 @@ exports.UpdateUser = (0, express_async_handler_1.default)((req, res) => __awaite
     const name = (_e = req.body) === null || _e === void 0 ? void 0 : _e.name;
     const about = (_f = req.body) === null || _f === void 0 ? void 0 : _f.about;
     const profile = (_g = req.body) === null || _g === void 0 ? void 0 : _g.profile;
-    const socket_id = req.body.socket_id;
-    console.log(_id, name, about);
     try {
         const updatedUser = yield UserModel_1.default.findOneAndUpdate({ _id: _id }, {
             name,
             profile,
             about,
-            socket_id
         }, { new: true });
         res.json(updatedUser);
     }
