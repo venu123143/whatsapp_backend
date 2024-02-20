@@ -146,10 +146,28 @@ export const onDisconnect = async (socket: CustomSocket) => {
     socket.user = null;
     // socket.disconnect();
 }
-export const updateSeen = async (socket: CustomSocket, msg: any) => {
-    console.log("update seen");
-    msg.seen = true;
-    socket.to(msg.senderId).emit("update_view", msg)
+export const updateSeen = async (socket: CustomSocket, unread: any) => {
+    for (let i = 0; i < unread.length; i++) {
+        let msg = unread[i]
+        msg.seen = true;
+        socket.to(msg.senderId).emit("update_view", msg)
+        const senderKey = `sender:${msg.senderId}-reciever:${msg.recieverId}`;
+        const senderKeyList = await redisClient.lRange(senderKey, 0, -1);
+        const messageIndex = senderKeyList.findIndex(each => JSON.parse(each).senderId === msg.senderId);
+        console.log(JSON.parse(senderKeyList[messageIndex]));
+
+        if (messageIndex !== -1) {
+            const updatedMsg = JSON.parse(senderKeyList[messageIndex]);
+            updatedMsg.seen = true;
+            const jsonStrngMsg = JSON.stringify(updatedMsg);
+            await redisClient.LSET(senderKey, messageIndex, jsonStrngMsg);
+        }
+        const doneKey = await redisClient.lRange(senderKey, 0, -1);
+
+        console.log(JSON.parse(doneKey[messageIndex]));
+        
+    }
+    // const recieverKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
 }
 
 export const getAllMessages = async (io: IO, socket: CustomSocket) => {
@@ -159,7 +177,8 @@ export const getAllMessages = async (io: IO, socket: CustomSocket) => {
     const res = await Promise.all(friendList.map(async (friend: any) => {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = await redisClient.lRange(senderKey, 0, -1);
-        const curr_chat = userChat?.map((each) => JSON.parse(each));
+
+        const curr_chat = userChat?.map((each) => JSON.parse(each)).reverse()
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
         return { ...friend, chat: curr_chat, lastMessage: lastMessage };

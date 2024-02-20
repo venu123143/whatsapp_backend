@@ -83,7 +83,6 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
-
 // controllers
 app.get('/', (req, res) => {
     res.send('backend home route sucessful')

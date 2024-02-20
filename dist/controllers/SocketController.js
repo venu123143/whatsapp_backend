@@ -149,10 +149,24 @@ const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () 
     socket.user = null;
 });
 exports.onDisconnect = onDisconnect;
-const updateSeen = (socket, msg) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("update seen");
-    msg.seen = true;
-    socket.to(msg.senderId).emit("update_view", msg);
+const updateSeen = (socket, unread) => __awaiter(void 0, void 0, void 0, function* () {
+    for (let i = 0; i < unread.length; i++) {
+        let msg = unread[i];
+        msg.seen = true;
+        socket.to(msg.senderId).emit("update_view", msg);
+        const senderKey = `sender:${msg.senderId}-reciever:${msg.recieverId}`;
+        const senderKeyList = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        const messageIndex = senderKeyList.findIndex(each => JSON.parse(each).senderId === msg.senderId);
+        console.log(JSON.parse(senderKeyList[messageIndex]));
+        if (messageIndex !== -1) {
+            const updatedMsg = JSON.parse(senderKeyList[messageIndex]);
+            updatedMsg.seen = true;
+            const jsonStrngMsg = JSON.stringify(updatedMsg);
+            yield index_1.redisClient.LSET(senderKey, messageIndex, jsonStrngMsg);
+        }
+        const doneKey = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        console.log(JSON.parse(doneKey[messageIndex]));
+    }
 });
 exports.updateSeen = updateSeen;
 const getAllMessages = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
@@ -161,7 +175,7 @@ const getAllMessages = (io, socket) => __awaiter(void 0, void 0, void 0, functio
     const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
-        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each));
+        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each)).reverse();
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
         return Object.assign(Object.assign({}, friend), { chat: curr_chat, lastMessage: lastMessage });
