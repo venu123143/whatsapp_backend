@@ -12,8 +12,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const jwtToken = (user, statusCode, res) => __awaiter(void 0, void 0, void 0, function* () {
     const token = yield user.generateAuthToken();
     if (token !== undefined) {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 3);
         const options = {
-            maxAge: 24 * 60 * 60 * 1000 * 2,
+            expires: expirationDate,
             secure: true,
             httpOnly: true,
             sameSite: "none",

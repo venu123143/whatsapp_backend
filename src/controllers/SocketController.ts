@@ -150,22 +150,29 @@ export const updateSeen = async (socket: CustomSocket, unread: any) => {
     for (let i = 0; i < unread.length; i++) {
         let msg = unread[i]
         msg.seen = true;
+        msg.right = true;
+
         socket.to(msg.senderId).emit("update_view", msg)
         const senderKey = `sender:${msg.senderId}-reciever:${msg.recieverId}`;
+        // const senderKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
         const senderKeyList = await redisClient.lRange(senderKey, 0, -1);
-        const messageIndex = senderKeyList.findIndex(each => JSON.parse(each).senderId === msg.senderId);
-        console.log(JSON.parse(senderKeyList[messageIndex]));
-
+        const messageIndex = senderKeyList.findIndex(each => JSON.parse(each).date === msg.date);
         if (messageIndex !== -1) {
             const updatedMsg = JSON.parse(senderKeyList[messageIndex]);
             updatedMsg.seen = true;
+            updatedMsg.right = true;
+
             const jsonStrngMsg = JSON.stringify(updatedMsg);
             await redisClient.LSET(senderKey, messageIndex, jsonStrngMsg);
         }
         const doneKey = await redisClient.lRange(senderKey, 0, -1);
+        const Response = doneKey.map((each) => {
+            const { message, seen, right } = JSON.parse(each);
+            return { message, seen, right };
+        });
 
-        console.log(JSON.parse(doneKey[messageIndex]));
-        
+
+
     }
     // const recieverKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
 }
