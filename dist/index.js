@@ -58,7 +58,6 @@ io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);
-    (0, SocketController_1.flushAllData)(io, socket);
     socket.on('add_friend', (user) => {
         (0, SocketController_1.addFriend)(socket, user);
     });

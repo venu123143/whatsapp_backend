@@ -45,6 +45,10 @@ const userSchema = new mongoose_1.default.Schema({
     online_status: {
         type: String,
     },
+    unreadCount: {
+        type: Number,
+        default: 0
+    },
     lastMessage: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: "Message",

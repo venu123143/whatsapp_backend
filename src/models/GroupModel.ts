@@ -4,6 +4,7 @@ export interface IGroup {
   socket_id: string;
   status: string;
   description: string;
+  unreadCount: number;
   users: Schema.Types.ObjectId[];
   admins: Schema.Types.ObjectId[];
   maxUsers: number;
@@ -41,6 +42,10 @@ const groupSchema: Schema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
+    },
+    unreadCount: {
+      type: Number,
+      default: 0
     },
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,

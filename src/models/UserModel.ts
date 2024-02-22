@@ -8,6 +8,7 @@ export interface IUser extends Document {
   mobile: string;
   otp?: string;
   profile?: string;
+  unreadCount: number;
   refreshToken?: string;
   lastMessage: any;
   loginType: string;
@@ -51,6 +52,10 @@ const userSchema: Schema = new mongoose.Schema(
     },
     online_status: {
       type: String,
+    },
+    unreadCount: {
+      type: Number,
+      default: 0
     },
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,

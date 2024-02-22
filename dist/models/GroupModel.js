@@ -33,6 +33,10 @@ const groupSchema = new mongoose_1.default.Schema({
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: "User"
     },
+    unreadCount: {
+        type: Number,
+        default: 0
+    },
     lastMessage: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: "Message"
