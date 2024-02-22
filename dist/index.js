@@ -21,6 +21,7 @@ const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const redis_1 = require("redis");
 process.on("uncaughtException", (err) => {
+    console.log(err);
     console.log(`Error: ${err.message}`);
     console.log(`shutting down the server for handling uncaught Exception`);
 });
@@ -57,6 +58,7 @@ io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);
+    (0, SocketController_1.flushAllData)(io, socket);
     socket.on('add_friend', (user) => {
         (0, SocketController_1.addFriend)(socket, user);
     });
@@ -70,7 +72,7 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
         (0, SocketController_1.sendMessage)(io, socket, data);
     });
     socket.on("get_all_messages", () => {
-        (0, SocketController_1.getAllMessages)(io, socket);
+        (0, SocketController_1.getAllMessages)(socket);
     });
     socket.on("create_group", (group) => {
         (0, SocketController_1.createGroup)(io, socket, group);

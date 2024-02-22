@@ -8,6 +8,8 @@ import { createClient } from "redis";
 
 // Handle uncaught Exception
 process.on("uncaughtException", (err) => {
+    console.log(err);
+
     console.log(`Error: ${err.message}`);
     console.log(`shutting down the server for handling uncaught Exception`);
 });
@@ -72,7 +74,7 @@ io.on("connect", async (socket: CustomSocket) => {
         sendMessage(io, socket, data)
     })
     socket.on("get_all_messages", () => {
-        getAllMessages(io, socket)
+        getAllMessages(socket)
     })
     socket.on("create_group", (group: any) => {
         createGroup(io, socket, group)
@@ -101,7 +103,7 @@ let newServer = server.listen(port, () => {
 })
 instrument(io, { auth: false });
 // unhandled promise rejection
-process.on("unhandledRejection", (err: Error) => {    
+process.on("unhandledRejection", (err: Error) => {
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);
     newServer.close(() => {

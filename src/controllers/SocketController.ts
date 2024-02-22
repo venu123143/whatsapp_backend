@@ -9,18 +9,50 @@ export interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap,
 }
 export interface IO extends Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> { }
 
+
+export const getAllMessages = async (socket: CustomSocket) => {
+    const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
+    const friendList = currFrndList?.map((each) => JSON.parse(each));
+
+    const res = await Promise.all(friendList.map(async (friend: any) => {
+        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
+        const userChat = await redisClient.lRange(senderKey, 0, -1);
+
+        const curr_chat = userChat?.map((each) => JSON.parse(each)).reverse()
+        const lastMessageIndex = curr_chat.length - 1;
+        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
+        return { ...friend, chat: curr_chat, lastMessage: lastMessage };
+    }));
+    // Sort the result by the date of the last message
+    const sortedRes = res.sort((a, b) => {
+        const lastMessageA = a.lastMessage;
+        const lastMessageB = b.lastMessage;
+        if (!lastMessageA && !lastMessageB) {
+            return 0;
+        } else if (!lastMessageA) {
+            return 1;
+        } else if (!lastMessageB) {
+            return -1;
+        } else {
+            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
+        }
+    });
+    socket.emit("get_all_messages_on_reload", sortedRes);
+}
+
 export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
     if (!socket.user) {
         next(new Error("Not Authorized"));
     } else {
         await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
-        const JsonFriend = await redisClient.lRange(`friends:${socket?.user?.socket_id}`, 0, -1)
-        const friendList = JsonFriend?.map((each) => {
-            const parseUser = JSON.parse(each);
-            return parseUser;
-        });
-        socket.emit("get_friends", friendList)
+        // const JsonFriend = await redisClient.lRange(`friends:${socket?.user?.socket_id}`, 0, -1)
+        // const friendList = JsonFriend?.map((each) => {
+        //     const parseUser = JSON.parse(each);
+        //     return parseUser;
+        // });
+        // socket.emit("get_friends", friendList)
         socket.join(socket?.user?.socket_id)
+        await getAllMessages(socket)
         next();
     }
 };
@@ -50,9 +82,9 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
     } else {
         await redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
-    const JsonFriend = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
-    const friendList = JsonFriend?.map((each) => JSON.parse(each));
-    socket.emit("get_friends", friendList)
+    // const JsonFriend = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
+    // const friendList = JsonFriend?.map((each) => JSON.parse(each));
+    socket.emit("get_friends", user)
 }
 export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
     const currFrndList = await redisClient.lRange(`friends:${user?.socket_id}`, 0, -1)
@@ -119,10 +151,10 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
         }
     }
 
-    const createdGroups = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const groupList = createdGroups?.map((each) => JSON.parse(each));
+    // const createdGroups = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
+    // const groupList = createdGroups?.map((each) => JSON.parse(each));
 
-    socket.emit("get_friends", groupList)
+    socket.emit("get_friends", group)
 
     const msgObj = {
         message: `${group.name} group was created by ${socket.user.name} `,
@@ -175,34 +207,4 @@ export const updateSeen = async (socket: CustomSocket, unread: any) => {
 
     }
     // const recieverKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
-}
-
-export const getAllMessages = async (io: IO, socket: CustomSocket) => {
-    const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
-    const friendList = currFrndList?.map((each) => JSON.parse(each));
-
-    const res = await Promise.all(friendList.map(async (friend: any) => {
-        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
-        const userChat = await redisClient.lRange(senderKey, 0, -1);
-
-        const curr_chat = userChat?.map((each) => JSON.parse(each)).reverse()
-        const lastMessageIndex = curr_chat.length - 1;
-        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
-        return { ...friend, chat: curr_chat, lastMessage: lastMessage };
-    }));
-    // Sort the result by the date of the last message
-    const sortedRes = res.sort((a, b) => {
-        const lastMessageA = a.lastMessage;
-        const lastMessageB = b.lastMessage;
-        if (!lastMessageA && !lastMessageB) {
-            return 0;
-        } else if (!lastMessageA) {
-            return 1;
-        } else if (!lastMessageB) {
-            return -1;
-        } else {
-            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
-        }
-    });
-    socket.emit("get_all_messages_on_reload", sortedRes);
 }

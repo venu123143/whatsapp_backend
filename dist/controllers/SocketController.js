@@ -9,22 +9,47 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllMessages = exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
 const index_1 = require("../index");
+const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
+    const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
+    const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
+        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
+        const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each)).reverse();
+        const lastMessageIndex = curr_chat.length - 1;
+        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
+        return Object.assign(Object.assign({}, friend), { chat: curr_chat, lastMessage: lastMessage });
+    })));
+    const sortedRes = res.sort((a, b) => {
+        const lastMessageA = a.lastMessage;
+        const lastMessageB = b.lastMessage;
+        if (!lastMessageA && !lastMessageB) {
+            return 0;
+        }
+        else if (!lastMessageA) {
+            return 1;
+        }
+        else if (!lastMessageB) {
+            return -1;
+        }
+        else {
+            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
+        }
+    });
+    socket.emit("get_all_messages_on_reload", sortedRes);
+});
+exports.getAllMessages = getAllMessages;
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     if (!socket.user) {
         next(new Error("Not Authorized"));
     }
     else {
         yield index_1.redisClient.hSet(`userId${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id}`, { "userId": (_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id.toString(), "connected": "true" });
-        const JsonFriend = yield index_1.redisClient.lRange(`friends:${(_c = socket === null || socket === void 0 ? void 0 : socket.user) === null || _c === void 0 ? void 0 : _c.socket_id}`, 0, -1);
-        const friendList = JsonFriend === null || JsonFriend === void 0 ? void 0 : JsonFriend.map((each) => {
-            const parseUser = JSON.parse(each);
-            return parseUser;
-        });
-        socket.emit("get_friends", friendList);
-        socket.join((_d = socket === null || socket === void 0 ? void 0 : socket.user) === null || _d === void 0 ? void 0 : _d.socket_id);
+        socket.join((_c = socket === null || socket === void 0 ? void 0 : socket.user) === null || _c === void 0 ? void 0 : _c.socket_id);
+        yield (0, exports.getAllMessages)(socket);
         next();
     }
 });
@@ -53,9 +78,7 @@ const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* 
     else {
         yield index_1.redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
-    const JsonFriend = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const friendList = JsonFriend === null || JsonFriend === void 0 ? void 0 : JsonFriend.map((each) => JSON.parse(each));
-    socket.emit("get_friends", friendList);
+    socket.emit("get_friends", user);
 });
 exports.addFriend = addFriend;
 const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, function* () {
@@ -123,9 +146,7 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
             console.error("Error handling user:", error);
         }
     }
-    const createdGroups = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const groupList = createdGroups === null || createdGroups === void 0 ? void 0 : createdGroups.map((each) => JSON.parse(each));
-    socket.emit("get_friends", groupList);
+    socket.emit("get_friends", group);
     const msgObj = {
         message: `${group.name} group was created by ${socket.user.name} `,
         msgType: "notification",
@@ -173,33 +194,3 @@ const updateSeen = (socket, unread) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.updateSeen = updateSeen;
-const getAllMessages = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
-    const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
-    const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
-        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
-        const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
-        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each)).reverse();
-        const lastMessageIndex = curr_chat.length - 1;
-        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
-        return Object.assign(Object.assign({}, friend), { chat: curr_chat, lastMessage: lastMessage });
-    })));
-    const sortedRes = res.sort((a, b) => {
-        const lastMessageA = a.lastMessage;
-        const lastMessageB = b.lastMessage;
-        if (!lastMessageA && !lastMessageB) {
-            return 0;
-        }
-        else if (!lastMessageA) {
-            return 1;
-        }
-        else if (!lastMessageB) {
-            return -1;
-        }
-        else {
-            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
-        }
-    });
-    socket.emit("get_all_messages_on_reload", sortedRes);
-});
-exports.getAllMessages = getAllMessages;
