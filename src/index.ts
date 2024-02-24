@@ -60,6 +60,8 @@ io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
+    console.log(`connections:- ${socket.id}`);
+    // socket._cleanup()
     // flushAllData(io, socket)
     socket.on('add_friend', (user: any) => {
         addFriend(socket, user)

@@ -13,6 +13,7 @@ export interface IO extends Server<DefaultEventsMap, DefaultEventsMap, DefaultEv
 export const getAllMessages = async (socket: CustomSocket) => {
     const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
     const friendList = currFrndList?.map((each) => JSON.parse(each));
+    console.log("calling getAAll Meags");
 
     const res = await Promise.all(friendList.map(async (friend: any) => {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
@@ -41,21 +42,23 @@ export const getAllMessages = async (socket: CustomSocket) => {
 }
 
 export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
-    if (!socket.user) {
+    if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     } else {
+        console.log("called socket.join() ");
+
         await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
-        // const JsonFriend = await redisClient.lRange(`friends:${socket?.user?.socket_id}`, 0, -1)
-        // const friendList = JsonFriend?.map((each) => {
-        //     const parseUser = JSON.parse(each);
-        //     return parseUser;
-        // });
-        // socket.emit("get_friends", friendList)
-        socket.join(socket?.user?.socket_id)
+        const userRooms = Array.from(socket.rooms);
+        if (!userRooms.includes(socket.user.socket_id)) {
+            console.log("inside calling join");
+
+            socket.join(socket.user.socket_id);
+        }
         await getAllMessages(socket)
         next();
     }
 };
+
 
 export const flushAllData = async (io: IO, socket: CustomSocket) => {
     // const rooms = io.sockets.adapter.rooms
@@ -95,7 +98,6 @@ export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
 export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
     const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-
     const senderMsg = JSON.stringify(data);
     const recieverMsg = JSON.stringify({ ...data, right: false });
     try {
@@ -104,6 +106,7 @@ export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
         if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
             await redisClient.LPUSH(senderKey, senderMsg);
             await redisClient.LPUSH(recieverKey, recieverMsg);
+
             socket.to(data.recieverId).emit("recieve_message", data);
         } else {
             console.error(`Receiver socket with ID ${data.recieverId} not found.`);

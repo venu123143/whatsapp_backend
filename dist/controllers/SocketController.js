@@ -14,6 +14,7 @@ const index_1 = require("../index");
 const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
     const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
+    console.log("calling getAAll Meags");
     const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
@@ -42,13 +43,18 @@ const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.getAllMessages = getAllMessages;
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
-    if (!socket.user) {
+    var _a, _b;
+    if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     }
     else {
+        console.log("called socket.join() ");
         yield index_1.redisClient.hSet(`userId${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id}`, { "userId": (_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id.toString(), "connected": "true" });
-        socket.join((_c = socket === null || socket === void 0 ? void 0 : socket.user) === null || _c === void 0 ? void 0 : _c.socket_id);
+        const userRooms = Array.from(socket.rooms);
+        if (!userRooms.includes(socket.user.socket_id)) {
+            console.log("inside calling join");
+            socket.join(socket.user.socket_id);
+        }
         yield (0, exports.getAllMessages)(socket);
         next();
     }
