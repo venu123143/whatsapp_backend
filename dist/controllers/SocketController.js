@@ -98,6 +98,7 @@ const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, func
     const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
     const senderMsg = JSON.stringify(data);
     const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, data), { right: false }));
+    console.log(data);
     try {
         const receiverSocket = yield io.to(data.recieverId).fetchSockets();
         const senderIdSocket = yield io.to(data.senderId).fetchSockets();
@@ -118,25 +119,43 @@ exports.sendMessage = sendMessage;
 const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, function* () {
     const jsonStrngGrp = JSON.stringify(group);
     const users = group.users;
+    const grpCreateAck = {
+        message: `${socket.user.name ? socket.user.name : socket.user.mobile} was created group ${group.name}`,
+        msgType: "notification",
+        conn_type: "group",
+        recieverId: group.socket_id,
+        date: new Date().toISOString(),
+        seen: false,
+        right: false,
+    };
+    const createAck = JSON.stringify(grpCreateAck);
     yield Promise.all(users.map((user) => __awaiter(void 0, void 0, void 0, function* () {
+        const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
         yield index_1.redisClient.LPUSH(`friends:${user.socket_id}`, jsonStrngGrp);
+        yield index_1.redisClient.LPUSH(senderKey, createAck);
     })));
+    io.to(socket.user.socket_id).emit("get_friends", group);
+    socket.to(group.socket_id).emit("recieve_message", grpCreateAck);
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
             const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
             const msgObj = {
-                message: ` ${socket.user.name} added ${user.name} to the group`,
+                message: `${socket.user.name ? socket.user.name : socket.user.mobile} added ${user.name ? user.name : user.mobile} to the group`,
                 msgType: "notification",
                 conn_type: "group",
                 recieverId: group.socket_id,
                 date: new Date().toISOString(),
                 right: false,
+                seen: false,
             };
             if (isUserInRoom) {
                 let userSocket = yield io.to(userSocketId).fetchSockets();
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
+                    socket.to(user.socket_id).emit("get_friends", group);
+                    const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
+                    yield index_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
                     socket.to(group.socket_id).emit("recieve_message", msgObj);
                     console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
                 }
@@ -152,16 +171,6 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
             console.error("Error handling user:", error);
         }
     }
-    socket.emit("get_friends", group);
-    const msgObj = {
-        message: `${group.name} group was created by ${socket.user.name} `,
-        msgType: "notification",
-        conn_type: "group",
-        recieverId: group.socket_id,
-        date: new Date().toISOString(),
-        right: false,
-    };
-    socket.to(group.socket_id).emit("recieve_message", msgObj);
 });
 exports.createGroup = createGroup;
 const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -192,11 +201,6 @@ const updateSeen = (socket, unread) => __awaiter(void 0, void 0, void 0, functio
             const jsonStrngMsg = JSON.stringify(updatedMsg);
             yield index_1.redisClient.LSET(senderKey, messageIndex, jsonStrngMsg);
         }
-        const doneKey = yield index_1.redisClient.lRange(senderKey, 0, -1);
-        const Response = doneKey.map((each) => {
-            const { message, seen, right } = JSON.parse(each);
-            return { message, seen, right };
-        });
     }
 });
 exports.updateSeen = updateSeen;
