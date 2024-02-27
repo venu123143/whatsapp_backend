@@ -96,18 +96,24 @@ export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
     const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
     const senderMsg = JSON.stringify(data);
     const recieverMsg = JSON.stringify({ ...data, right: false });
-    
-    try {
-        const receiverSocket = await io.to(data.recieverId).fetchSockets();
-        const senderIdSocket = await io.to(data.senderId).fetchSockets();        
-        if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
-            await redisClient.LPUSH(senderKey, senderMsg);
-            await redisClient.LPUSH(recieverKey, recieverMsg);
 
-            socket.to(data.recieverId).emit("recieve_message", data);
-        } else {
-            console.error(`Receiver socket with ID ${data.recieverId} not found.`);
-        }
+    try {
+
+        await redisClient.LPUSH(senderKey, senderMsg);
+        await redisClient.LPUSH(recieverKey, recieverMsg);
+
+        socket.to(data.recieverId).emit("recieve_message", data);
+
+        // const receiverSocket = await io.to(data.recieverId).fetchSockets();
+        // const senderIdSocket = await io.to(data.senderId).fetchSockets();        
+        // if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
+        //     await redisClient.LPUSH(senderKey, senderMsg);
+        //     await redisClient.LPUSH(recieverKey, recieverMsg);
+
+        //     socket.to(data.recieverId).emit("recieve_message", data);
+        // } else {
+        //     console.error(`Receiver socket with ID ${data.recieverId} not found.`);
+        // }
 
     } catch (error) {
         console.error("Error sending message:", error);
@@ -134,7 +140,6 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
         await redisClient.LPUSH(senderKey, createAck);
     }));
     io.to(socket.user.socket_id).emit("get_friends", group)
-    socket.to(group.socket_id).emit("recieve_message", grpCreateAck)
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
@@ -170,6 +175,7 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
             console.error("Error handling user:", error);
         }
     }
+    socket.to(group.socket_id).emit("recieve_message", grpCreateAck)
 
 
     // const createdGroups = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);

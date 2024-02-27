@@ -14,7 +14,6 @@ const index_1 = require("../index");
 const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
     const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
-    console.log("calling getAAll Meags");
     const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
@@ -48,11 +47,9 @@ const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, functi
         next(new Error("Not Authorized"));
     }
     else {
-        console.log("called socket.join() ");
         yield index_1.redisClient.hSet(`userId${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id}`, { "userId": (_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
-            console.log("inside calling join");
             socket.join(socket.user.socket_id);
         }
         yield (0, exports.getAllMessages)(socket);
@@ -98,18 +95,10 @@ const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, func
     const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
     const senderMsg = JSON.stringify(data);
     const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, data), { right: false }));
-    console.log(data);
     try {
-        const receiverSocket = yield io.to(data.recieverId).fetchSockets();
-        const senderIdSocket = yield io.to(data.senderId).fetchSockets();
-        if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
-            yield index_1.redisClient.LPUSH(senderKey, senderMsg);
-            yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
-            socket.to(data.recieverId).emit("recieve_message", data);
-        }
-        else {
-            console.error(`Receiver socket with ID ${data.recieverId} not found.`);
-        }
+        yield index_1.redisClient.LPUSH(senderKey, senderMsg);
+        yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
+        socket.to(data.recieverId).emit("recieve_message", data);
     }
     catch (error) {
         console.error("Error sending message:", error);
@@ -135,7 +124,6 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
         yield index_1.redisClient.LPUSH(senderKey, createAck);
     })));
     io.to(socket.user.socket_id).emit("get_friends", group);
-    socket.to(group.socket_id).emit("recieve_message", grpCreateAck);
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
@@ -171,6 +159,7 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
             console.error("Error handling user:", error);
         }
     }
+    socket.to(group.socket_id).emit("recieve_message", grpCreateAck);
 });
 exports.createGroup = createGroup;
 const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
