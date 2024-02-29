@@ -17,7 +17,9 @@ export const getAllMessages = async (socket: CustomSocket) => {
     const res = await Promise.all(friendList.map(async (friend: any) => {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = await redisClient.lRange(senderKey, 0, -1);
-
+        if (friend.users && friend.users.length > 0) {  // for group
+            socket.join(friend.socket_id)
+        }
         const curr_chat = userChat?.map((each) => JSON.parse(each)).reverse()
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
@@ -93,27 +95,26 @@ export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
 
 export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
-    const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-    const senderMsg = JSON.stringify(data);
-    const recieverMsg = JSON.stringify({ ...data, right: false });
+    let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
+    const { users, ...dataWithoutUsers } = data;
+    const senderMsg = JSON.stringify(dataWithoutUsers);
+    const recieverMsg = JSON.stringify({ ...dataWithoutUsers, right: false });
 
     try {
-
-        await redisClient.LPUSH(senderKey, senderMsg);
-        await redisClient.LPUSH(recieverKey, recieverMsg);
-
+        // const receiverSocket = await io.to(data.recieverId).fetchSockets();
         socket.to(data.recieverId).emit("recieve_message", data);
 
-        // const receiverSocket = await io.to(data.recieverId).fetchSockets();
-        // const senderIdSocket = await io.to(data.senderId).fetchSockets();        
-        // if (receiverSocket.length > 0 && senderIdSocket.length > 0) {
-        //     await redisClient.LPUSH(senderKey, senderMsg);
-        //     await redisClient.LPUSH(recieverKey, recieverMsg);
-
-        //     socket.to(data.recieverId).emit("recieve_message", data);
-        // } else {
-        //     console.error(`Receiver socket with ID ${data.recieverId} not found.`);
-        // }
+        await redisClient.LPUSH(senderKey, senderMsg);
+        if (data.conn_type === 'group') {
+            for (const user of data.users) {
+                if (user.socket_id !== socket.user.socket_id) {
+                    recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`
+                    await redisClient.LPUSH(recieverKey, recieverMsg);
+                }
+            }
+        } else {
+            await redisClient.LPUSH(recieverKey, recieverMsg);
+        }
 
     } catch (error) {
         console.error("Error sending message:", error);
@@ -144,6 +145,8 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
         try {
             const userSocketId = user.socket_id;
             const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
+            console.log(isUserInRoom, user?.name);
+
             const msgObj = {
                 message: `${socket.user.name ? socket.user.name : socket.user.mobile} added ${user.name ? user.name : user.mobile} to the group`,
                 msgType: "notification",
@@ -158,16 +161,17 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
                     socket.to(user.socket_id).emit("get_friends", group)
-
-                    const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
-                    await redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
-
-                    socket.to(group.socket_id).emit("recieve_message", msgObj)
-
-                    console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
-                } else {
-                    console.warn(`User with ID ${userSocketId} is not connected.`);
                 }
+                const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
+                await redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
+
+                socket.to(group.socket_id).emit("recieve_message", msgObj)
+
+                console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
+
+                // else {
+                //     console.warn(`User with ID ${userSocketId} is not connected.`);
+                // }
             } else {
                 console.error(`User with ID ${userSocketId} is not a Socket.`);
             }

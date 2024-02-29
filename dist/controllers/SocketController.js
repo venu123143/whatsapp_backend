@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
 const index_1 = require("../index");
@@ -17,6 +28,9 @@ const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* (
     const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
         const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
         const userChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        if (friend.users && friend.users.length > 0) {
+            socket.join(friend.socket_id);
+        }
         const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each)).reverse();
         const lastMessageIndex = curr_chat.length - 1;
         const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
@@ -92,13 +106,24 @@ const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, funct
 exports.getFriends = getFriends;
 const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
-    const recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-    const senderMsg = JSON.stringify(data);
-    const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, data), { right: false }));
+    let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
+    const { users } = data, dataWithoutUsers = __rest(data, ["users"]);
+    const senderMsg = JSON.stringify(dataWithoutUsers);
+    const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, dataWithoutUsers), { right: false }));
     try {
-        yield index_1.redisClient.LPUSH(senderKey, senderMsg);
-        yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
         socket.to(data.recieverId).emit("recieve_message", data);
+        yield index_1.redisClient.LPUSH(senderKey, senderMsg);
+        if (data.conn_type === 'group') {
+            for (const user of data.users) {
+                if (user.socket_id !== socket.user.socket_id) {
+                    recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`;
+                    yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
+                }
+            }
+        }
+        else {
+            yield index_1.redisClient.LPUSH(recieverKey, recieverMsg);
+        }
     }
     catch (error) {
         console.error("Error sending message:", error);
@@ -128,6 +153,7 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
         try {
             const userSocketId = user.socket_id;
             const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
+            console.log(isUserInRoom, user === null || user === void 0 ? void 0 : user.name);
             const msgObj = {
                 message: `${socket.user.name ? socket.user.name : socket.user.mobile} added ${user.name ? user.name : user.mobile} to the group`,
                 msgType: "notification",
@@ -142,14 +168,11 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
                     socket.to(user.socket_id).emit("get_friends", group);
-                    const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
-                    yield index_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
-                    socket.to(group.socket_id).emit("recieve_message", msgObj);
-                    console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
                 }
-                else {
-                    console.warn(`User with ID ${userSocketId} is not connected.`);
-                }
+                const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
+                yield index_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
+                socket.to(group.socket_id).emit("recieve_message", msgObj);
+                console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
             }
             else {
                 console.error(`User with ID ${userSocketId} is not a Socket.`);
