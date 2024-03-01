@@ -4,17 +4,31 @@ import Message, { IChatMessage } from '../models/MessageModel'
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from 'uuid';
 import fs from "fs"
+import { uploadImage } from '../utils/Cloudinary';
 // Controller functions
 export const createGroup = async (req: Request, res: Response) => {
-  const name = req.body.name
-  const users = req.body.users
-  const profile = req.body?.profile
-  if (!users.includes(req.user?._id)) {
-    users.push(req.user?._id);
-  }
-  console.log(name, users, profile);
+  const formData = req.body;
+  const name = req.body?.name
+  const users = JSON.parse(formData.users)
 
   try {
+
+    const uploader = (path: string) => uploadImage(path);
+    const files = req.files as Express.Multer.File[];
+    
+    let profile = ""
+    for (const file of files) {
+      const { path } = file;
+      const newpath = await uploader(path);
+      profile = newpath.url
+      fs.unlinkSync(path);
+    }
+
+    if (!users.includes(req.user?._id)) {
+      users.push(req.user?._id);
+    }
+    console.log(name, profile);
+
     if (users.length <= 50) {
       const group = await Group.create({
         name: name,
@@ -78,10 +92,20 @@ export const getGroupById = async (req: Request, res: Response) => {
 
 export const updateGroup = async (req: Request, res: Response) => {
   const { groupId } = req.params;
-  const name = req.body.name;
+  // const formData = req.body;
+  const name = req.body?.name
+  // const users = JSON.parse(formData.users)
+  const uploader = (path: string) => uploadImage(path);
+  const files = req.files as Express.Multer.File[];
+  let profile = ""
+  for (const file of files) {
+    const { path } = file;
+    const newpath = await uploader(path);
+    profile = newpath.url
+    fs.unlinkSync(path);
+  }
   const status = req.body.status;
   const description = req.body.description;
-  const profile = req.body.profile;
 
   try {
     const group = await Group.findByIdAndUpdate(groupId, { name, status, description, profile }, { new: true });
@@ -206,7 +230,7 @@ export const backupMessages = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No messages found for the group' });
     }
 
-    const backupData = messages.map((message:any) => {
+    const backupData = messages.map((message: any) => {
       return {
         message: message.message,
         msg_type: message.msg_type,

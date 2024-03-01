@@ -18,16 +18,26 @@ const UserModel_1 = __importDefault(require("../models/UserModel"));
 const MessageModel_1 = __importDefault(require("../models/MessageModel"));
 const uuid_1 = require("uuid");
 const fs_1 = __importDefault(require("fs"));
+const Cloudinary_1 = require("../utils/Cloudinary");
 const createGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
-    const name = req.body.name;
-    const users = req.body.users;
-    const profile = (_a = req.body) === null || _a === void 0 ? void 0 : _a.profile;
-    if (!users.includes((_b = req.user) === null || _b === void 0 ? void 0 : _b._id)) {
-        users.push((_c = req.user) === null || _c === void 0 ? void 0 : _c._id);
-    }
-    console.log(name, users, profile);
+    const formData = req.body;
+    const name = (_a = req.body) === null || _a === void 0 ? void 0 : _a.name;
+    const users = JSON.parse(formData.users);
     try {
+        const uploader = (path) => (0, Cloudinary_1.uploadImage)(path);
+        const files = req.files;
+        let profile = "";
+        for (const file of files) {
+            const { path } = file;
+            const newpath = yield uploader(path);
+            profile = newpath.url;
+            fs_1.default.unlinkSync(path);
+        }
+        if (!users.includes((_b = req.user) === null || _b === void 0 ? void 0 : _b._id)) {
+            users.push((_c = req.user) === null || _c === void 0 ? void 0 : _c._id);
+        }
+        console.log(name, profile);
         if (users.length <= 50) {
             const group = yield GroupModel_1.default.create({
                 name: name,
@@ -93,11 +103,20 @@ const getGroupById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.getGroupById = getGroupById;
 const updateGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _g;
     const { groupId } = req.params;
-    const name = req.body.name;
+    const name = (_g = req.body) === null || _g === void 0 ? void 0 : _g.name;
+    const uploader = (path) => (0, Cloudinary_1.uploadImage)(path);
+    const files = req.files;
+    let profile = "";
+    for (const file of files) {
+        const { path } = file;
+        const newpath = yield uploader(path);
+        profile = newpath.url;
+        fs_1.default.unlinkSync(path);
+    }
     const status = req.body.status;
     const description = req.body.description;
-    const profile = req.body.profile;
     try {
         const group = yield GroupModel_1.default.findByIdAndUpdate(groupId, { name, status, description, profile }, { new: true });
         if (!group) {
