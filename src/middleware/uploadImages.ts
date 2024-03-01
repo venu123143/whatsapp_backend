@@ -17,7 +17,6 @@ const destinationFolder = path.join(currentDirName, '../public/images');
 if (!fs.existsSync(destinationFolder)) {
     fs.mkdirSync(destinationFolder, { recursive: true });
 }
-console.log(destinationFolder);
 
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {

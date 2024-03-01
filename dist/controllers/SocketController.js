@@ -20,7 +20,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
 const index_1 = require("../index");
 const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
@@ -168,10 +168,10 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
                     socket.to(user.socket_id).emit("get_friends", group);
+                    socket.to(group.socket_id).emit("recieve_message", msgObj);
                 }
                 const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
                 yield index_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
-                socket.to(group.socket_id).emit("recieve_message", msgObj);
                 console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
             }
             else {
@@ -185,6 +185,12 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
     socket.to(group.socket_id).emit("recieve_message", grpCreateAck);
 });
 exports.createGroup = createGroup;
+const deleteMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
+    const messageToRemove = JSON.stringify(data);
+    index_1.redisClient.LREM(senderKey, 0, messageToRemove);
+});
+exports.deleteMessage = deleteMessage;
 const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     const userStatus = yield index_1.redisClient.hGet(`userId${data.recieverId}`, 'connected');
     const status = { recieverId: data.recieverId, status: userStatus };

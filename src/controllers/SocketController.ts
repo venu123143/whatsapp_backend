@@ -161,11 +161,11 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
                 if (userSocket.length !== 0) {
                     userSocket[0].join(group.socket_id);
                     socket.to(user.socket_id).emit("get_friends", group)
+                    socket.to(group.socket_id).emit("recieve_message", msgObj)
                 }
                 const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
                 await redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
 
-                socket.to(group.socket_id).emit("recieve_message", msgObj)
 
                 console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
 
@@ -186,6 +186,15 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     // const groupList = createdGroups?.map((each) => JSON.parse(each));
 
 };
+
+export const deleteMessage = async (io: IO, socket: CustomSocket, data: any) => {
+    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
+    // const res = await redisClient.del(senderKey);
+    const messageToRemove = JSON.stringify(data)
+    redisClient.LREM(senderKey, 0, messageToRemove)
+    // console.log(res);
+
+}
 export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => {
     const userStatus = await redisClient.hGet(`userId${data.recieverId}`, 'connected')
     const status = { recieverId: data.recieverId, status: userStatus }
