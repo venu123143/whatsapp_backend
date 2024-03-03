@@ -193,20 +193,26 @@ const deleteMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, fu
 exports.deleteMessage = deleteMessage;
 const editMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     if (data.right === true) {
-        const { index, users } = data, withOutIndex = __rest(data, ["index", "users"]);
+        const { users } = data, withOutIndex = __rest(data, ["users"]);
         const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
         let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-        yield index_1.redisClient.LSET(senderKey, index, JSON.stringify(withOutIndex));
+        const currentChat = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        const msgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+        yield index_1.redisClient.LSET(senderKey, msgIndex, JSON.stringify(withOutIndex));
         if (data.conn_type === 'group') {
             for (const user of users) {
                 if (user.socket_id !== socket.user.socket_id) {
                     recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`;
-                    yield index_1.redisClient.LSET(recieverKey, index, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
+                    const currentChat = yield index_1.redisClient.lRange(recieverKey, 0, -1);
+                    const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+                    yield index_1.redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
                 }
             }
         }
         else {
-            yield index_1.redisClient.LSET(recieverKey, index, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
+            const currentChat = yield index_1.redisClient.lRange(recieverKey, 0, -1);
+            const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+            yield index_1.redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
         }
         const updatedChatSender = yield index_1.redisClient.lRange(senderKey, 0, -1);
         const updatedChatReciever = yield index_1.redisClient.lRange(recieverKey, 0, -1);

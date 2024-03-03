@@ -197,21 +197,27 @@ export const deleteMessage = async (io: IO, socket: CustomSocket, data: any) => 
 }
 export const editMessage = async (io: IO, socket: CustomSocket, data: any) => {
     if (data.right === true) {
-        const { index, users, ...withOutIndex } = data;
+        const { users, ...withOutIndex } = data;
         const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
         let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-        // const currentChat = await redisClient.lRange(senderKey, 0, -1)
-        // const msgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
-        await redisClient.LSET(senderKey, index, JSON.stringify(withOutIndex));
+        const currentChat = await redisClient.lRange(senderKey, 0, -1)
+        const msgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+
+        await redisClient.LSET(senderKey, msgIndex, JSON.stringify(withOutIndex));
         if (data.conn_type === 'group') {
             for (const user of users) {
                 if (user.socket_id !== socket.user.socket_id) {
                     recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`
-                    await redisClient.LSET(recieverKey, index, JSON.stringify({ ...withOutIndex, right: false }));
+                    const currentChat = await redisClient.lRange(recieverKey, 0, -1)
+                    const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+
+                    await redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify({ ...withOutIndex, right: false }));
                 }
             }
         } else {
-            await redisClient.LSET(recieverKey, index, JSON.stringify({ ...withOutIndex, right: false }));
+            const currentChat = await redisClient.lRange(recieverKey, 0, -1)
+            const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
+            await redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify({ ...withOutIndex, right: false }));
         }
         const updatedChatSender = await redisClient.lRange(senderKey, 0, -1)
         const updatedChatReciever = await redisClient.lRange(recieverKey, 0, -1)
