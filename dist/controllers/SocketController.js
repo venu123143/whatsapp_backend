@@ -20,7 +20,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
 const index_1 = require("../index");
 const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield index_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
@@ -191,6 +191,32 @@ const deleteMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, fu
     index_1.redisClient.LREM(senderKey, 0, messageToRemove);
 });
 exports.deleteMessage = deleteMessage;
+const editMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
+    if (data.right === true) {
+        const { index, users } = data, withOutIndex = __rest(data, ["index", "users"]);
+        const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
+        let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
+        yield index_1.redisClient.LSET(senderKey, index, JSON.stringify(withOutIndex));
+        if (data.conn_type === 'group') {
+            for (const user of users) {
+                if (user.socket_id !== socket.user.socket_id) {
+                    recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`;
+                    yield index_1.redisClient.LSET(recieverKey, index, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
+                }
+            }
+        }
+        else {
+            yield index_1.redisClient.LSET(recieverKey, index, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
+        }
+        const updatedChatSender = yield index_1.redisClient.lRange(senderKey, 0, -1);
+        const updatedChatReciever = yield index_1.redisClient.lRange(recieverKey, 0, -1);
+        const recChat = updatedChatReciever.map(each => JSON.parse(each)).reverse();
+        socket.to(data.recieverId).emit("update_msg", recChat);
+        const sendChat = updatedChatSender.map(each => JSON.parse(each)).reverse();
+        io.to(data.senderId).emit("update_msg", sendChat);
+    }
+});
+exports.editMessage = editMessage;
 const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     const userStatus = yield index_1.redisClient.hGet(`userId${data.recieverId}`, 'connected');
     const status = { recieverId: data.recieverId, status: userStatus };

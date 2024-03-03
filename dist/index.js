@@ -70,6 +70,9 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     socket.on("send_message", (data) => {
         (0, SocketController_1.sendMessage)(io, socket, data);
     });
+    socket.on("edit_message", (data) => {
+        (0, SocketController_1.editMessage)(io, socket, data);
+    });
     socket.on("get_all_messages", () => {
         (0, SocketController_1.getAllMessages)(socket);
     });

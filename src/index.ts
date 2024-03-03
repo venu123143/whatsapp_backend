@@ -28,7 +28,7 @@ import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, flushAllData,
     sendMessage, createGroup, updateSeen, getFriends,
-    addFriend, onDisconnect, onlineStatus, getAllMessages
+    addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
 
@@ -72,6 +72,9 @@ io.on("connect", async (socket: CustomSocket) => {
     })
     socket.on("send_message", (data: any) => {
         sendMessage(io, socket, data)
+    })
+    socket.on("edit_message", (data: any) => {
+        editMessage(io, socket, data)
     })
     socket.on("get_all_messages", () => {
         getAllMessages(socket)
