@@ -88,6 +88,7 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
+
 // controllers
 app.get('/', (req, res) => {
     res.send('backend home route sucessful')
@@ -107,6 +108,8 @@ let newServer = server.listen(port, () => {
 instrument(io, { auth: false });
 // unhandled promise rejection
 process.on("unhandledRejection", (err: Error) => {
+    console.log(err.stack);
+    
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);
     newServer.close(() => {

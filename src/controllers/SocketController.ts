@@ -240,7 +240,7 @@ export const onDisconnect = async (socket: CustomSocket) => {
     console.log("disconnecting.");
     await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
     socket.user = null;
-    // socket.disconnect();
+    socket.disconnect(true);
 }
 export const updateSeen = async (socket: CustomSocket, unread: any) => {
     for (let i = 0; i < unread.length; i++) {

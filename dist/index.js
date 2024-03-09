@@ -97,6 +97,7 @@ let newServer = server.listen(port, () => {
 });
 (0, admin_ui_1.instrument)(io, { auth: false });
 process.on("unhandledRejection", (err) => {
+    console.log(err.stack);
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);
     newServer.close(() => {

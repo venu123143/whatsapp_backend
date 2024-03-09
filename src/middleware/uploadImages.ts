@@ -8,7 +8,6 @@ import fs from 'fs'
 // Get the directory name of the current file path
 const currentDirName = dirname(__filename);
 
-import sharp from "sharp"
 import path from "path"
 import FancyError from '../utils/FancyError';
 
@@ -37,35 +36,35 @@ const multerFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCal
     }
 };
 
-export const productImgResize = async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.files) return next();
-    const files = req.files as Express.Multer.File[];
+// export const productImgResize = async (req: Request, res: Response, next: NextFunction) => {
+//     if (!req.files) return next();
+//     const files = req.files as Express.Multer.File[];
 
-    await Promise.all(files.map(async (file: Request["file"]) => {
-        await sharp(file?.path)
-            .resize(300, 300)
-            .toFormat('jpeg')
-            .jpeg({ quality: 90 })
-            .toFile(`dist/public/images/products/${file?.filename}`)
-        fs.unlinkSync(`dist/public/images/products/${file?.filename}`)
-    }))
-    next();
-}
-export const blogImgResize = async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.files) return next();
+//     await Promise.all(files.map(async (file: Request["file"]) => {
+//         await sharp(file?.path)
+//             .resize(300, 300)
+//             .toFormat('jpeg')
+//             .jpeg({ quality: 90 })
+//             .toFile(`dist/public/images/products/${file?.filename}`)
+//         fs.unlinkSync(`dist/public/images/products/${file?.filename}`)
+//     }))
+//     next();
+// }
+// export const blogImgResize = async (req: Request, res: Response, next: NextFunction) => {
+//     if (!req.files) return next();
 
-    const files = req.files as Express.Multer.File[];
+//     const files = req.files as Express.Multer.File[];
 
-    await Promise.all(files.map(async (file: Request["file"]) => {
-        await sharp(file?.path)
-            .resize(300, 300)
-            .toFormat('jpeg')
-            .jpeg({ quality: 90 })
-            .toFile(`dist/public/images/blogs/${file?.filename}`)
-        fs.unlinkSync(`dist/public/images/blogs/${file?.filename}`)
-    }))
-    next();
-}
+//     await Promise.all(files.map(async (file: Request["file"]) => {
+//         await sharp(file?.path)
+//             .resize(300, 300)
+//             .toFormat('jpeg')
+//             .jpeg({ quality: 90 })
+//             .toFile(`dist/public/images/blogs/${file?.filename}`)
+//         fs.unlinkSync(`dist/public/images/blogs/${file?.filename}`)
+//     }))
+//     next();
+// }
 
 export const uploadPhoto = multer({
     storage: multerStorage,

@@ -233,6 +233,7 @@ const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () 
     console.log("disconnecting.");
     yield index_1.redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" });
     socket.user = null;
+    socket.disconnect(true);
 });
 exports.onDisconnect = onDisconnect;
 const updateSeen = (socket, unread) => __awaiter(void 0, void 0, void 0, function* () {
