@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { ExtendedError } from 'socket.io/dist/namespace';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
-import { redisClient } from "../index"
+import { redisClient } from "../utils/session"
 import { Server } from "socket.io";
 
 export interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> {

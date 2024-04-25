@@ -9,9 +9,20 @@ import asyncHandler from "express-async-handler"
 import { uploadImage, deleteImage } from "../utils/Cloudinary";
 import fs from "fs"
 const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
-
+import { getSession, setSession, removeSession } from "../utils/session"
+import { MemoryStore, SessionData, Session } from "express-session";
 //joi validation
+declare module 'express-serve-static-core' {
+  interface Request {
+    session: SessionData & Session & CookieOptions & MemoryStore & {
+      userDetails?: {
+        sentAt: number,
+        mobile: number, otp?: string
+      }
+    };
+  }
 
+}
 const sendTextMessage = async (mobile: string, otp: string) => {
   try {
     const msg = await client.messages.create({
@@ -28,43 +39,43 @@ export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) =>
   const mobile = req.body?.mobile;
   await signUpSchema.validateAsync(req.body)
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  try {
-    let user = await User.findOne({ mobile });
-    if (!user) {
-      user = await User.create({ mobile, otp, socket_id: uuidv4() });
-    } else {
-      user = await User.findOneAndUpdate(
-        { mobile },
-        { $set: { otp } },
-        { new: true }
-      );
-    }
-    // const msg = sendTextMessage(mobile, otp)
-    res.status(200).json({
-      user, success: true, message: `Verification code ${user?.otp} sent to ${mobile}, Valid for next 10 mins. `,
-    });
-  } catch (error) {
-    console.log(error);
-    throw new FancyError("Incorrect Number or Invalid Number.", 500)
-  }
+  const otpCreatedAt = new Date().getTime();
+  req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp }
+  res.setHeader('sessionId', req.sessionID);
+  const data = { ...req.session, userDetails: { ...req.session.userDetails, sentAt: otpCreatedAt, mobile: mobile, otp: otp } }
+  await setSession(req.headers.sessionid as string, data);
+  // const msg = sendTextMessage(mobile, otp)
+  res.status(200).json({
+    success: true, message: `Verification code ${otp} sent to ${mobile}, Valid for next 10 mins. `,
+  });
+
 })
-
-
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const curOTP = req.body?.otp;
-  const mobile = req.body?.mobile;
   await loginSchema.validateAsync(req.body)
   const enterOtp = curOTP.toString().replaceAll(",", "");
 
-  const user = await User.findOne({ mobile });
-  const time = user?.updatedAt?.getTime();
+  const session = await getSession(req.headers.sessionid as string);
+  console.log(session);
+
+  if (!session?.userDetails) {
+    throw new FancyError("OTP incorrect or timeout, Try Again", 403)
+  }
+
+  let user = await User.findOne({ mobile: session.userDetails.mobile });
+  console.log(user);
+
+  const time = session.userDetails.sentAt
   const currentTime = new Date().getTime();
   const otpValidityDuration = 10 * 60 * 1000;
   const isValid = time ? currentTime - time : 13;
-
+  const otp = session.userDetails.otp
   try {
-    if (user && user.otp == enterOtp && time && isValid <= otpValidityDuration) {
+    if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
       // CREATE ACCESS, REFRESH TOKENS AND SETUP COOKIES
+      if (!user) {
+        user = await User.create({ mobile: session.userDetails.mobile, otp, socket_id: uuidv4() });
+      }
       return jwtToken(user, 201, res)
 
       // res.status(201).cookie("loginToken", token, options).json({ user, success: true, message: "user logged in sucessfully." });

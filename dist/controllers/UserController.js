@@ -23,6 +23,7 @@ const express_async_handler_1 = __importDefault(require("express-async-handler")
 const Cloudinary_1 = require("../utils/Cloudinary");
 const fs_1 = __importDefault(require("fs"));
 const client = (0, twilio_1.default)(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
+const session_1 = require("../utils/session");
 const sendTextMessage = (mobile, otp) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const msg = yield client.messages.create({
@@ -41,36 +42,37 @@ exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awa
     const mobile = (_a = req.body) === null || _a === void 0 ? void 0 : _a.mobile;
     yield JoiSchemas_1.signUpSchema.validateAsync(req.body);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    try {
-        let user = yield UserModel_1.default.findOne({ mobile });
-        if (!user) {
-            user = yield UserModel_1.default.create({ mobile, otp, socket_id: (0, uuid_1.v4)() });
-        }
-        else {
-            user = yield UserModel_1.default.findOneAndUpdate({ mobile }, { $set: { otp } }, { new: true });
-        }
-        res.status(200).json({
-            user, success: true, message: `Verification code ${user === null || user === void 0 ? void 0 : user.otp} sent to ${mobile}, Valid for next 10 mins. `,
-        });
-    }
-    catch (error) {
-        console.log(error);
-        throw new FancyError_1.default("Incorrect Number or Invalid Number.", 500);
-    }
+    const otpCreatedAt = new Date().getTime();
+    req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp };
+    res.setHeader('sessionId', req.sessionID);
+    const data = Object.assign(Object.assign({}, req.session), { userDetails: Object.assign(Object.assign({}, req.session.userDetails), { sentAt: otpCreatedAt, mobile: mobile, otp: otp }) });
+    yield (0, session_1.setSession)(req.headers.sessionid, data);
+    res.status(200).json({
+        success: true, message: `Verification code ${otp} sent to ${mobile}, Valid for next 10 mins. `,
+    });
 }));
 exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d;
+    var _b;
     const curOTP = (_b = req.body) === null || _b === void 0 ? void 0 : _b.otp;
-    const mobile = (_c = req.body) === null || _c === void 0 ? void 0 : _c.mobile;
     yield JoiSchemas_1.loginSchema.validateAsync(req.body);
     const enterOtp = curOTP.toString().replaceAll(",", "");
-    const user = yield UserModel_1.default.findOne({ mobile });
-    const time = (_d = user === null || user === void 0 ? void 0 : user.updatedAt) === null || _d === void 0 ? void 0 : _d.getTime();
+    const session = yield (0, session_1.getSession)(req.headers.sessionid);
+    console.log(session);
+    if (!(session === null || session === void 0 ? void 0 : session.userDetails)) {
+        throw new FancyError_1.default("OTP incorrect or timeout, Try Again", 403);
+    }
+    let user = yield UserModel_1.default.findOne({ mobile: session.userDetails.mobile });
+    console.log(user);
+    const time = session.userDetails.sentAt;
     const currentTime = new Date().getTime();
     const otpValidityDuration = 10 * 60 * 1000;
     const isValid = time ? currentTime - time : 13;
+    const otp = session.userDetails.otp;
     try {
-        if (user && user.otp == enterOtp && time && isValid <= otpValidityDuration) {
+        if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
+            if (!user) {
+                user = yield UserModel_1.default.create({ mobile: session.userDetails.mobile, otp, socket_id: (0, uuid_1.v4)() });
+            }
             return (0, jwtToken_1.default)(user, 201, res);
         }
         else {
@@ -91,11 +93,11 @@ exports.logoutUser = (0, express_async_handler_1.default)((req, res) => __awaite
     res.clearCookie('loginToken', { path: '/' }).json({ message: 'User logged out successfully', success: true });
 }));
 exports.UpdateUser = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e, _f, _g;
+    var _c, _d, _e;
     const _id = req.params.id;
-    const name = (_e = req.body) === null || _e === void 0 ? void 0 : _e.name;
-    const about = (_f = req.body) === null || _f === void 0 ? void 0 : _f.about;
-    const profile = (_g = req.body) === null || _g === void 0 ? void 0 : _g.profile;
+    const name = (_c = req.body) === null || _c === void 0 ? void 0 : _c.name;
+    const about = (_d = req.body) === null || _d === void 0 ? void 0 : _d.about;
+    const profile = (_e = req.body) === null || _e === void 0 ? void 0 : _e.profile;
     try {
         const updatedUser = yield UserModel_1.default.findOneAndUpdate({ _id: _id }, {
             name,
@@ -129,8 +131,8 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 exports.getAllUsers = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _h;
-    const loggedInUserId = (_h = req.user) === null || _h === void 0 ? void 0 : _h._id;
+    var _f;
+    const loggedInUserId = (_f = req.user) === null || _f === void 0 ? void 0 : _f._id;
     try {
         const users = yield UserModel_1.default.find({ _id: { $ne: loggedInUserId } });
         res.status(200).json(users);

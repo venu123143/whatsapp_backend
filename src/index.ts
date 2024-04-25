@@ -4,7 +4,7 @@ import cors, { CorsOptions } from "cors";
 import morgan from "morgan";
 import http from 'http'
 import { Server } from "socket.io";
-import { createClient } from "redis";
+
 
 // Handle uncaught Exception
 process.on("uncaughtException", (err) => {
@@ -31,12 +31,10 @@ import {
     addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
-
+import session from "./utils/session"
 const server = http.createServer(app)
 
-export const redisClient = createClient({ url: process.env.REDIS_URL });
 
-redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 const io = new Server(server, {
     cors: {
         origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
@@ -55,7 +53,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // app.use(express.static('../node_modules/@socket.io/admin-ui/ui/dist'))
 app.use(morgan('dev'))
-// app.use(sessionMiddleware)
+app.use(session)
 io.use(socketMiddleware)
 io.use(authorizeUser)
 io.on("connect", async (socket: CustomSocket) => {

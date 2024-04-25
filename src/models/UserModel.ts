@@ -6,7 +6,6 @@ export interface IUser extends Document {
   socket_id: string;
   about?: string;
   mobile: string;
-  otp?: string;
   profile?: string;
   unreadCount: number;
   refreshToken?: string;
@@ -37,9 +36,6 @@ const userSchema: Schema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-    },
-    otp: {
-      type: String,
     },
     profile: {
       type: String,
