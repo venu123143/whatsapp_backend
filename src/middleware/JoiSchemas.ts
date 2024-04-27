@@ -15,7 +15,6 @@ export const signUpSchema = Joi.object({
 });
 
 export const loginSchema = Joi.object({
-  mobile: Joi.string().trim().required().pattern(/^[6-9]\d{9}$/),
   otp: Joi.array()
     .items(Joi.number().integer().min(0).max(9))
     .length(6)
