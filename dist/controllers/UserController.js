@@ -68,7 +68,7 @@ exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter
     try {
         if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
             if (!user) {
-                user = yield UserModel_1.default.create({ mobile: session.userDetails.mobile, otp, socket_id: (0, uuid_1.v4)() });
+                user = yield UserModel_1.default.create({ mobile: session.userDetails.mobile, socket_id: (0, uuid_1.v4)() });
             }
             return (0, jwtToken_1.default)(user, 201, res);
         }

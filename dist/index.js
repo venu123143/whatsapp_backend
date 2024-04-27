@@ -44,6 +44,7 @@ const io = new socket_io_1.Server(server, {
 const options = {
     origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
+    exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 };
 app.use((0, cors_1.default)(options));
 app.use(express_1.default.json());
