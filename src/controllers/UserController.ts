@@ -70,7 +70,7 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const isValid = currentTime - time
   const otp = session.userDetails.otp
   try {
-    if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
+    if (otp == enterOtp && time && isValid <= otpValidityDuration) {
       // CREATE ACCESS, REFRESH TOKENS AND SETUP COOKIES
       if (!user) {
         user = await User.create({ mobile: session.userDetails.mobile, socket_id: uuidv4() });
