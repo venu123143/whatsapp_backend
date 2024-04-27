@@ -37,14 +37,16 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
+        origin: '*',
+        // origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
         credentials: true,
     }
 });
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin:'*',
+    // origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
     exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 }
