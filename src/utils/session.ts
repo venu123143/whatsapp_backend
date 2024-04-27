@@ -13,10 +13,10 @@ const ses = session({
     saveUninitialized: false,
     secret: process.env.SESSION_SECRET as string,
     cookie: {
-        sameSite: 'lax',
+        sameSite: 'none',
         secure: false,
-        // httpOnly: true,
-        maxAge: 10 * 60 * 100 // 10 min
+        httpOnly: true,
+        maxAge: 10 * 60 * 1000 // 10 min
     }
 })
 

@@ -22,6 +22,7 @@ const jwtToken_1 = __importDefault(require("../utils/jwtToken"));
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const Cloudinary_1 = require("../utils/Cloudinary");
 const fs_1 = __importDefault(require("fs"));
+const moment_1 = __importDefault(require("moment"));
 const client = (0, twilio_1.default)(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 const session_1 = require("../utils/session");
 const sendTextMessage = (mobile, otp) => __awaiter(void 0, void 0, void 0, function* () {
@@ -42,11 +43,9 @@ exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awa
     const mobile = (_a = req.body) === null || _a === void 0 ? void 0 : _a.mobile;
     yield JoiSchemas_1.signUpSchema.validateAsync(req.body);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpCreatedAt = new Date().getTime();
+    const otpCreatedAt = (0, moment_1.default)().unix();
     req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp };
     res.setHeader('sessionId', req.sessionID);
-    const data = Object.assign(Object.assign({}, req.session), { userDetails: Object.assign(Object.assign({}, req.session.userDetails), { sentAt: otpCreatedAt, mobile: mobile, otp: otp }) });
-    yield (0, session_1.setSession)(req.headers.sessionid, data);
     res.status(200).json({
         success: true, message: `Verification code ${otp} sent to ${mobile}, Valid for next 10 mins. `,
     });
@@ -57,16 +56,14 @@ exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter
     yield JoiSchemas_1.loginSchema.validateAsync(req.body);
     const enterOtp = curOTP.toString().replaceAll(",", "");
     const session = yield (0, session_1.getSession)(req.headers.sessionid);
-    console.log(session);
     if (!(session === null || session === void 0 ? void 0 : session.userDetails)) {
-        throw new FancyError_1.default("OTP incorrect or timeout, Try Again", 403);
+        throw new FancyError_1.default("OTP incorrect or timeout, Try Again,", 403);
     }
     let user = yield UserModel_1.default.findOne({ mobile: session.userDetails.mobile });
-    console.log(user);
     const time = session.userDetails.sentAt;
-    const currentTime = new Date().getTime();
+    const currentTime = (0, moment_1.default)().unix();
     const otpValidityDuration = 10 * 60 * 1000;
-    const isValid = time ? currentTime - time : 13;
+    const isValid = currentTime - time;
     const otp = session.userDetails.otp;
     try {
         if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
@@ -80,7 +77,6 @@ exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter
         }
     }
     catch (error) {
-        console.log(error);
         throw new FancyError_1.default("OTP incorrect or timeout, Try Again", 403);
     }
 }));

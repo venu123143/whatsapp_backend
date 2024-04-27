@@ -26,9 +26,10 @@ const ses = (0, express_session_1.default)({
     saveUninitialized: false,
     secret: process.env.SESSION_SECRET,
     cookie: {
-        sameSite: 'lax',
+        sameSite: 'none',
         secure: false,
-        maxAge: 10 * 60 * 100
+        httpOnly: true,
+        maxAge: 10 * 60 * 1000
     }
 });
 function getSession(sessionId) {
