@@ -73,7 +73,7 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
     if (user && otp == enterOtp && time && isValid <= otpValidityDuration) {
       // CREATE ACCESS, REFRESH TOKENS AND SETUP COOKIES
       if (!user) {
-        user = await User.create({ mobile: session.userDetails.mobile, otp, socket_id: uuidv4() });
+        user = await User.create({ mobile: session.userDetails.mobile, socket_id: uuidv4() });
       }
       return jwtToken(user, 201, res)
     } else {
