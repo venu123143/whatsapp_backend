@@ -46,6 +46,7 @@ const io = new Server(server, {
 const options: CorsOptions = {
     origin: ['http://localhost:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
+    exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 }
 app.use(cors(options));
 app.use(express.json());
@@ -107,7 +108,7 @@ instrument(io, { auth: false });
 // unhandled promise rejection
 process.on("unhandledRejection", (err: Error) => {
     console.log(err.stack);
-    
+
     console.log(`Shutting down the server for ${err.message}`);
     console.log(`Shutting down the server for unhandle promise rejection`);
     newServer.close(() => {
