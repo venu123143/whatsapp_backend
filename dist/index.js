@@ -12,14 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.redisClient = void 0;
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const morgan_1 = __importDefault(require("morgan"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
-const redis_1 = require("redis");
 process.on("uncaughtException", (err) => {
     console.log(err);
     console.log(`Error: ${err.message}`);
@@ -35,9 +33,8 @@ const GroupRoute_1 = __importDefault(require("./routes/GroupRoute"));
 const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
 const admin_ui_1 = require("@socket.io/admin-ui");
+const session_1 = __importDefault(require("./utils/session"));
 const server = http_1.default.createServer(app);
-exports.redisClient = (0, redis_1.createClient)({ url: process.env.REDIS_URL });
-exports.redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err));
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: ["http://localhost:5173", 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
@@ -53,6 +50,7 @@ app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)());
 app.use((0, morgan_1.default)('dev'));
+app.use(session_1.default);
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
