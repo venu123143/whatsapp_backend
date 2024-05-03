@@ -91,9 +91,8 @@ app.use("/api/msg", MessageRoute_1.default);
 app.use('/api/groups', GroupRoute_1.default);
 app.use(Errors_1.default);
 const port = process.env.PORT || 5000;
-let ip = process.env.IP;
-const newServer = server.listen(port, ip, () => {
-    console.log(`server is running on port http://${ip}:${port}`);
+let newServer = server.listen(port, () => {
+    console.log(`server is running on port number ${port}`);
 });
 (0, admin_ui_1.instrument)(io, { auth: false });
 process.on("unhandledRejection", (err) => {
