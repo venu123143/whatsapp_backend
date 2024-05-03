@@ -37,12 +37,12 @@ const session_1 = __importDefault(require("./utils/session"));
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: ["http://localhost:5173", 'http://192.168.0.175:5173', 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
+        origin: ["http://localhost:5173", 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
         credentials: true,
     }
 });
 const options = {
-    origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
     exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 };

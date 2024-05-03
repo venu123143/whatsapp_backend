@@ -37,15 +37,15 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", 'http://192.168.0.175:5173', 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
+        origin: ["http://localhost:5173", 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
         credentials: true,
-        
+
     }
 });
 
 // cors, json and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
     exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 }
@@ -101,13 +101,13 @@ app.use('/api/groups', groupRoutes);
 // Error handler and server port
 app.use(ErrorHandler)
 const port = process.env.PORT || 5000
-// let newServer = server.listen(port, () => {
-//     console.log(`server is running on port number ${port}`);
-// })
-let ip = process.env.IP as any
-const newServer = server.listen(port, ip, () => {
-    console.log(`server is running on port http://${ip}:${port}`);
-});
+let newServer = server.listen(port, () => {
+    console.log(`server is running on port number ${port}`);
+})
+// let ip = process.env.IP as any
+// const newServer = server.listen(port, ip, () => {
+//     console.log(`server is running on port http://${ip}:${port}`);
+// });
 instrument(io, { auth: false });
 // unhandled promise rejection
 process.on("unhandledRejection", (err: Error) => {
