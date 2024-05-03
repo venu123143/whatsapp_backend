@@ -10,9 +10,9 @@ const jwtToken = async (user: IUser, statusCode: number, res: Response) => {
         // maxAge = 24 * 60 * 60 * 1000 = 1 day 
         const options: CookieOptions = {
             expires: expirationDate,
-            secure: true,
-            httpOnly: true,
-            sameSite: "none",
+            secure: false,
+            httpOnly: false,
+            sameSite: 'strict'
         }
         res.status(statusCode).cookie('loginToken', token, options).json({
             user,

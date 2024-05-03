@@ -16,9 +16,9 @@ const jwtToken = (user, statusCode, res) => __awaiter(void 0, void 0, void 0, fu
         expirationDate.setDate(expirationDate.getDate() + 3);
         const options = {
             expires: expirationDate,
-            secure: true,
-            httpOnly: true,
-            sameSite: "none",
+            secure: false,
+            httpOnly: false,
+            sameSite: 'strict'
         };
         res.status(statusCode).cookie('loginToken', token, options).json({
             user,
