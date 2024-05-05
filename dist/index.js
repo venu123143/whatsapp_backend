@@ -30,6 +30,7 @@ const Errors_1 = __importDefault(require("./middleware/Errors"));
 const UserRoute_1 = __importDefault(require("./routes/UserRoute"));
 const MessageRoute_1 = __importDefault(require("./routes/MessageRoute"));
 const GroupRoute_1 = __importDefault(require("./routes/GroupRoute"));
+const CallsRoute_1 = __importDefault(require("./routes/CallsRoute"));
 const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
 const admin_ui_1 = require("@socket.io/admin-ui");
@@ -89,6 +90,7 @@ app.get('/', (req, res) => {
 app.use("/api/users", UserRoute_1.default);
 app.use("/api/msg", MessageRoute_1.default);
 app.use('/api/groups', GroupRoute_1.default);
+app.use('/api/calls', CallsRoute_1.default);
 app.use(Errors_1.default);
 const port = process.env.PORT || 5000;
 let newServer = server.listen(port, () => {
