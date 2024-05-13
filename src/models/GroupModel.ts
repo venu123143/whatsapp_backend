@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-export interface IGroup {
+export interface IGroup extends Document {
   name: string;
   socket_id: string;
   status: string;

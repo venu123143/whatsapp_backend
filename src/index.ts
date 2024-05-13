@@ -24,6 +24,7 @@ import ErrorHandler from "./middleware/Errors"
 import UserRouter from './routes/UserRoute'
 import MsgRouter from './routes/MessageRoute'
 import groupRoutes from './routes/GroupRoute'
+import CallsRouter from './routes/CallsRoute'
 import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, flushAllData,
@@ -96,6 +97,7 @@ app.get('/', (req, res) => {
 app.use("/api/users", UserRouter)
 app.use("/api/msg", MsgRouter)
 app.use('/api/groups', groupRoutes);
+app.use('/api/calls', CallsRouter);
 
 
 // Error handler and server port

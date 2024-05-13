@@ -28,7 +28,6 @@ exports.authMiddleware = (0, express_async_handler_1.default)((req, res, next) =
         }
     }
     catch (error) {
-        console.log(error);
         throw new FancyError_1.default('not Authorized, token expired..!, please login again', 401);
     }
 }));
