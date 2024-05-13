@@ -52,7 +52,7 @@ exports.getCalls = (0, express_async_handler_1.default)((req, res) => __awaiter(
                 { joinedUsers: { $in: [userId] } },
             ],
             status: 'completed',
-        }).skip(skip)
+        }).sort({ createdAt: -1 }).skip(skip)
             .limit(limitNumber)
             .populate({
             path: 'createdBy',
@@ -61,7 +61,7 @@ exports.getCalls = (0, express_async_handler_1.default)((req, res) => __awaiter(
             path: 'joinedUsers',
             select: 'socket_id name profile mobile _id',
         });
-        res.status(200).json({ message: 'your call has been started ', data: calls });
+        res.status(200).json({ message: 'Your recent calls history fetched.', data: calls });
     }
     catch (error) {
         const errorMessage = (error === null || error === void 0 ? void 0 : error.details) ? error.details[0].message.replace(/["\\]/g, '') : error.message;

@@ -45,7 +45,7 @@ export const getCalls = asyncHandler(async (req: Request, res: Response) => {
                 { joinedUsers: { $in: [userId] } },
             ],
             status: 'completed',
-        }).skip(skip)
+        }).sort({ createdAt: -1 }).skip(skip)
             .limit(limitNumber)
             .populate({
                 path: 'createdBy',
@@ -55,7 +55,7 @@ export const getCalls = asyncHandler(async (req: Request, res: Response) => {
                 select: 'socket_id name profile mobile _id', // Only these fields
             })
 
-        res.status(200).json({ message: 'your call has been started ', data: calls })
+        res.status(200).json({ message: 'Your recent calls history fetched.', data: calls })
     } catch (error: any) {
         const errorMessage = error?.details ? error.details[0].message.replace(/["\\]/g, '') : error.message;
         res.status(500).json({ message: errorMessage })
