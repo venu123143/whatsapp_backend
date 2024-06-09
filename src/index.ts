@@ -43,7 +43,7 @@ const io = new Server(server, {
 
     }
 });
-
+const callsNamespace = io.of("/calls");
 // cors, json and cookie-parser
 const options: CorsOptions = {
     origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
@@ -59,6 +59,12 @@ app.use(morgan('dev'))
 app.use(session)
 io.use(socketMiddleware)
 io.use(authorizeUser)
+callsNamespace.use((socket, next) => {
+    console.log("calls namespace called");
+
+    // ensure the socket has access to the "orders" namespace, and then
+    next();
+});
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
     // flushAllData(io, socket)
@@ -89,6 +95,12 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
+
+
+callsNamespace.on("connect", async (socket: CustomSocket) => {
+    console.log(`calls name space is connected with id: ${socket.id}`);
+
+})
 // controllers
 app.get('/', (req, res) => {
     res.send('backend home route sucessful')
