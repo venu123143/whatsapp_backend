@@ -9,7 +9,8 @@ import asyncHandler from "express-async-handler"
 import { uploadImage, deleteImage } from "../utils/Cloudinary";
 import fs from "fs"
 import moment from "moment"
-const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
+const client = Twilio("ACe69d70920ba9b33132398f72cc1a74fb", process.env.ACCOUNT_TOKEN);
+// const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 import { getSession, setSession, removeSession } from "../utils/session"
 import { MemoryStore, SessionData, Session } from "express-session";
 //joi validation
