@@ -38,10 +38,11 @@ const session_1 = __importDefault(require("./utils/session"));
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: ["http://localhost:5173", 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com', "https://admin.socket.io"],
+        origin: ["http://localhost:5173", 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
         credentials: true,
     }
 });
+const callsNamespace = io.of("/calls");
 const options = {
     origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
@@ -55,6 +56,10 @@ app.use((0, morgan_1.default)('dev'));
 app.use(session_1.default);
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
+callsNamespace.use((socket, next) => {
+    console.log("calls namespace called");
+    next();
+});
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);
@@ -83,6 +88,9 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
         (0, SocketController_1.updateSeen)(socket, msg);
     });
     socket.on("disconnecting", () => (0, SocketController_1.onDisconnect)(socket));
+}));
+callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`calls name space is connected with id: ${socket.id}`);
 }));
 app.get('/', (req, res) => {
     res.send('backend home route sucessful');
