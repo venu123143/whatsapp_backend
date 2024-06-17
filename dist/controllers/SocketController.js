@@ -20,7 +20,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.authorizeUser = exports.getAllMessages = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.JoinUserToOwnRoom = exports.authorizeUser = exports.getAllMessages = void 0;
 const session_1 = require("../utils/session");
 const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield session_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
@@ -71,6 +71,19 @@ const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.authorizeUser = authorizeUser;
+const JoinUserToOwnRoom = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!socket.user || socket.user === null) {
+        next(new Error("Not Authorized"));
+    }
+    else {
+        const userRooms = Array.from(socket.rooms);
+        if (!userRooms.includes(socket.user.socket_id)) {
+            socket.join(socket.user.socket_id);
+        }
+        next();
+    }
+});
+exports.JoinUserToOwnRoom = JoinUserToOwnRoom;
 const flushAllData = (io, socket) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield session_1.redisClient.flushAll();

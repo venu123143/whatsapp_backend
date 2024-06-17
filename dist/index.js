@@ -57,6 +57,7 @@ app.use(session_1.default);
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
 callsNamespace.use(ConnectSession_1.socketMiddleware);
+callsNamespace.use(SocketController_1.JoinUserToOwnRoom);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);
@@ -88,6 +89,15 @@ io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
 }));
 callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(`calls name space is connected with id: ${socket.id}`);
+    socket.on('ice-candidate', (data) => {
+        socket.to(data.to).emit("ice-candiate", { candidate: data.candidate, from: socket.user.socket_id });
+    });
+    socket.on("call-offer", (data) => {
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user.socket_id });
+    });
+    socket.on("call-answer", (data) => {
+        socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
+    });
 }));
 app.get('/', (req, res) => {
     res.send('backend home route sucessful');

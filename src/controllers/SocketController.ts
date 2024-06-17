@@ -57,7 +57,18 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
     }
 };
 
+export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
+    if (!socket.user || socket.user === null) {
+        next(new Error("Not Authorized"));
+    } else {
+        const userRooms = Array.from(socket.rooms);
+        if (!userRooms.includes(socket.user.socket_id)) {
+            socket.join(socket.user.socket_id);
+        }
+        next()
+    }
 
+}
 export const flushAllData = async (io: IO, socket: CustomSocket) => {
     // const rooms = io.sockets.adapter.rooms
     // console.log(rooms);
@@ -264,3 +275,4 @@ export const updateSeen = async (socket: CustomSocket, unread: any) => {
     }
     // const recieverKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
 }
+
