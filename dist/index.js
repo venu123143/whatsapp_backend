@@ -56,10 +56,7 @@ app.use((0, morgan_1.default)('dev'));
 app.use(session_1.default);
 io.use(ConnectSession_1.socketMiddleware);
 io.use(SocketController_1.authorizeUser);
-callsNamespace.use((socket, next) => {
-    console.log("calls namespace called");
-    next();
-});
+callsNamespace.use(ConnectSession_1.socketMiddleware);
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     console.log(`user ${socket === null || socket === void 0 ? void 0 : socket.user.name} with UUID:- ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id} is connected`);

@@ -59,12 +59,7 @@ app.use(morgan('dev'))
 app.use(session)
 io.use(socketMiddleware)
 io.use(authorizeUser)
-callsNamespace.use((socket, next) => {
-    console.log("calls namespace called");
-
-    // ensure the socket has access to the "orders" namespace, and then
-    next();
-});
+callsNamespace.use(socketMiddleware);
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
     // flushAllData(io, socket)
@@ -94,8 +89,6 @@ io.on("connect", async (socket: CustomSocket) => {
     })
     socket.on("disconnecting", () => onDisconnect(socket))
 })
-
-
 
 callsNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`calls name space is connected with id: ${socket.id}`);
