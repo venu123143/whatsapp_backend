@@ -64,6 +64,8 @@ export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: Exten
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
+            console.log('user joined the call server');
+            
         }
         next()
     }
@@ -248,7 +250,7 @@ export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => 
     io.to(data.senderId).emit('user_status', status)
 }
 export const onDisconnect = async (socket: CustomSocket) => {
-    console.log("disconnecting.");
+    console.log("disconnecting.", socket.user.name);
     await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
     socket.user = null;
     socket.disconnect(true);

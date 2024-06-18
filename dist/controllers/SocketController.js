@@ -79,6 +79,7 @@ const JoinUserToOwnRoom = (socket, next) => __awaiter(void 0, void 0, void 0, fu
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
+            console.log('user joined the call server');
         }
         next();
     }
@@ -243,7 +244,7 @@ const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.onlineStatus = onlineStatus;
 const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("disconnecting.");
+    console.log("disconnecting.", socket.user.name);
     yield session_1.redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" });
     socket.user = null;
     socket.disconnect(true);

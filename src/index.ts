@@ -94,11 +94,14 @@ io.on("connect", async (socket: CustomSocket) => {
 
 callsNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`calls name space is connected with id: ${socket.id}`);
-    socket.on('ice-candidate', (data) => {
-        socket.to(data.to).emit("ice-candiate", { candidate: data.candidate, from: socket.user.socket_id })
+    socket.on('ice-candidate-offer', (data) => {
+        socket.to(data.to).emit("ice-candiate-offer", { candidate: data.candidate, from: socket.user.socket_id })
+    });
+    socket.on('ice-candidate-answer', (data) => {
+        socket.to(data.to).emit("ice-candiate-answer", { candidate: data.candidate, from: socket.user.socket_id })
     });
     socket.on("call-offer", (data) => {
-        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user.socket_id })
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user._id })
     })
     socket.on("call-answer", (data) => {
         socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id })
