@@ -57,7 +57,20 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
     }
 };
 
+export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
+    if (!socket.user || socket.user === null) {
+        next(new Error("Not Authorized"));
+    } else {
+        const userRooms = Array.from(socket.rooms);
+        if (!userRooms.includes(socket.user.socket_id)) {
+            socket.join(socket.user.socket_id);
+            console.log('user joined the call server');
+            
+        }
+        next()
+    }
 
+}
 export const flushAllData = async (io: IO, socket: CustomSocket) => {
     // const rooms = io.sockets.adapter.rooms
     // console.log(rooms);
@@ -237,7 +250,7 @@ export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => 
     io.to(data.senderId).emit('user_status', status)
 }
 export const onDisconnect = async (socket: CustomSocket) => {
-    console.log("disconnecting.");
+    console.log("disconnecting.", socket.user.name);
     await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
     socket.user = null;
     socket.disconnect(true);
@@ -264,3 +277,4 @@ export const updateSeen = async (socket: CustomSocket, unread: any) => {
     }
     // const recieverKey = `sender:${msg.recieverId}-reciever:${msg.senderId}`;
 }
+

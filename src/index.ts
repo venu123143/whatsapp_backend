@@ -29,7 +29,8 @@ import { socketMiddleware } from "./config/ConnectSession"
 import {
     authorizeUser, CustomSocket, flushAllData,
     sendMessage, createGroup, updateSeen, getFriends,
-    addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage
+    addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage,
+    JoinUserToOwnRoom
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
 import session from "./utils/session"
@@ -59,12 +60,8 @@ app.use(morgan('dev'))
 app.use(session)
 io.use(socketMiddleware)
 io.use(authorizeUser)
-callsNamespace.use((socket, next) => {
-    console.log("calls namespace called");
-
-    // ensure the socket has access to the "orders" namespace, and then
-    next();
-});
+callsNamespace.use(socketMiddleware);
+callsNamespace.use(JoinUserToOwnRoom);
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
     // flushAllData(io, socket)
@@ -95,11 +92,20 @@ io.on("connect", async (socket: CustomSocket) => {
     socket.on("disconnecting", () => onDisconnect(socket))
 })
 
-
-
 callsNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`calls name space is connected with id: ${socket.id}`);
-
+    socket.on('ice-candidate-offer', (data) => {
+        socket.to(data.to).emit("ice-candiate-offer", { candidate: data.candidate, from: socket.user.socket_id })
+    });
+    socket.on('ice-candidate-answer', (data) => {
+        socket.to(data.to).emit("ice-candiate-answer", { candidate: data.candidate, from: socket.user.socket_id })
+    });
+    socket.on("call-offer", (data) => {
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user._id })
+    })
+    socket.on("call-answer", (data) => {
+        socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id })
+    })
 })
 // controllers
 app.get('/', (req, res) => {
