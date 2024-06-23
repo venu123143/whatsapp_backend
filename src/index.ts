@@ -106,6 +106,9 @@ callsNamespace.on("connect", async (socket: CustomSocket) => {
     socket.on("call-answer", (data) => {
         socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id })
     })
+    socket.on("stop-call", (data) => {
+        socket.to(data.to).emit("stop-call", { from: socket.user.socket_id })
+    })
 })
 // controllers
 app.get('/', (req, res) => {

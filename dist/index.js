@@ -101,6 +101,10 @@ callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, funct
     socket.on("call-answer", (data) => {
         socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
     });
+    socket.on("stop-call", (data) => {
+        console.log(data);
+        socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
+    });
 }));
 app.get('/', (req, res) => {
     res.send('backend home route sucessful');
