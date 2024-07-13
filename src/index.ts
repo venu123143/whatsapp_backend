@@ -4,6 +4,7 @@ import cors, { CorsOptions } from "cors";
 import morgan from "morgan";
 import http from 'http'
 import { Server } from "socket.io";
+import { createAdapter, } from '@socket.io/redis-adapter';
 
 
 // Handle uncaught Exception
@@ -34,9 +35,32 @@ import {
 } from "./controllers/SocketController";
 import { instrument } from "@socket.io/admin-ui"
 import session from "./utils/session"
+import { createClient } from "redis";
 const server = http.createServer(app)
+const pubClient = createClient({ url: process.env.REDIS_ADAPTOR });
+const subClient = pubClient.duplicate();
 
+let redisConnected = false;
 
+async function connectRedis() {
+    if (redisConnected) return;
+    try {
+        await pubClient.connect();
+        await subClient.connect();
+        redisConnected = true;
+        console.log("Redis adapter connected");
+
+        io.adapter(createAdapter(pubClient, subClient));
+        const info = await pubClient.info('memory');
+        const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
+        console.log(`Redis memory usage: ${usedMemory} bytes`);
+
+    } catch (err) {
+        console.error("Redis adapter error:", err);
+    }
+}
+
+connectRedis();
 const io = new Server(server, {
     cors: {
         origin: ["http://localhost:5173", 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
@@ -44,6 +68,7 @@ const io = new Server(server, {
 
     }
 });
+
 const callsNamespace = io.of("/calls");
 // cors, json and cookie-parser
 const options: CorsOptions = {

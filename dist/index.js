@@ -18,6 +18,7 @@ const cors_1 = __importDefault(require("cors"));
 const morgan_1 = __importDefault(require("morgan"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
+const redis_adapter_1 = require("@socket.io/redis-adapter");
 process.on("uncaughtException", (err) => {
     console.log(err);
     console.log(`Error: ${err.message}`);
@@ -35,7 +36,32 @@ const ConnectSession_1 = require("./config/ConnectSession");
 const SocketController_1 = require("./controllers/SocketController");
 const admin_ui_1 = require("@socket.io/admin-ui");
 const session_1 = __importDefault(require("./utils/session"));
+const redis_1 = require("redis");
 const server = http_1.default.createServer(app);
+const pubClient = (0, redis_1.createClient)({ url: process.env.REDIS_ADAPTOR });
+const subClient = pubClient.duplicate();
+let redisConnected = false;
+function connectRedis() {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        if (redisConnected)
+            return;
+        try {
+            yield pubClient.connect();
+            yield subClient.connect();
+            redisConnected = true;
+            console.log("Redis adapter connected");
+            io.adapter((0, redis_adapter_1.createAdapter)(pubClient, subClient));
+            const info = yield pubClient.info('memory');
+            const usedMemory = parseInt(((_a = info.split('\r\n').find(line => line.startsWith('used_memory:'))) === null || _a === void 0 ? void 0 : _a.split(':')[1]) || '0');
+            console.log(`Redis memory usage: ${usedMemory} bytes`);
+        }
+        catch (err) {
+            console.error("Redis adapter error:", err);
+        }
+    });
+}
+connectRedis();
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: ["http://localhost:5173", 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
@@ -102,7 +128,6 @@ callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, funct
         socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
     });
     socket.on("stop-call", (data) => {
-        console.log(data);
         socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
     });
 }));

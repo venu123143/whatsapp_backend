@@ -19,6 +19,11 @@ const redis_1 = require("redis");
 exports.redisClient = (0, redis_1.createClient)({ url: process.env.REDIS_URL });
 exports.redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err));
 const store = new connect_redis_1.default({ client: exports.redisClient });
+exports.redisClient.info('memory').then((info) => {
+    var _a;
+    const usedMemory = parseInt(((_a = info.split('\r\n').find(line => line.startsWith('used_memory:'))) === null || _a === void 0 ? void 0 : _a.split(':')[1]) || '0');
+    console.log(`socket memory usage: ${usedMemory} bytes`);
+});
 const ses = (0, express_session_1.default)({
     name: 'loginSession',
     store: store,
