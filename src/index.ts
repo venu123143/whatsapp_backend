@@ -87,6 +87,7 @@ io.use(socketMiddleware)
 io.use(authorizeUser)
 callsNamespace.use(socketMiddleware);
 callsNamespace.use(JoinUserToOwnRoom);
+   
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user.name} with UUID:- ${socket?.user?.socket_id} is connected`);
     // flushAllData(io, socket)
