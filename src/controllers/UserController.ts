@@ -82,15 +82,21 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
       const deviceInfo = req.headers['user-agent'];
       const parser = new UAParser(deviceInfo);
       const token = await jwtToken(user)
-      console.log(parser.getBrowser().name, "browser name");
+
+      const safari = parser.getBrowser().name?.toLowerCase().includes('safari')
+      let sameSite = 'none'
+      if (safari) {
+        sameSite = 'lax'
+      }
+      console.log(process.env.NODE_ENV === 'production');
 
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 3); // Add 3 days
-      const options: CookieOptions = {
+      const options: any = {
         expires: expirationDate,
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? sameSite : 'strict',
       }
       res.status(200).cookie('loginToken', token, options).json({
         user,
