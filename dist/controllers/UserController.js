@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllUsers = exports.updateProfile = exports.UpdateUser = exports.logoutUser = exports.verifyOtp = exports.SendOtpViaSms = void 0;
 const twilio_1 = __importDefault(require("twilio"));
+const ua_parser_js_1 = __importDefault(require("ua-parser-js"));
 const UserModel_1 = __importDefault(require("../models/UserModel"));
 const uuid_1 = require("uuid");
 const FancyError_1 = __importDefault(require("../utils/FancyError"));
@@ -70,7 +71,23 @@ exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter
             if (!user) {
                 user = yield UserModel_1.default.create({ mobile: session.userDetails.mobile, socket_id: (0, uuid_1.v4)() });
             }
-            return (0, jwtToken_1.default)(user, 201, res);
+            const deviceInfo = req.headers['user-agent'];
+            const parser = new ua_parser_js_1.default(deviceInfo);
+            const token = yield (0, jwtToken_1.default)(user);
+            console.log(parser.getBrowser().name, "browser name");
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + 3);
+            const options = {
+                expires: expirationDate,
+                secure: process.env.NODE_ENV === 'production',
+                httpOnly: true,
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            };
+            res.status(200).cookie('loginToken', token, options).json({
+                user,
+                sucess: true,
+                message: "user logged in sucessfully"
+            });
         }
         else {
             throw new FancyError_1.default("OTP incorrect or timeout, Try Again", 403);

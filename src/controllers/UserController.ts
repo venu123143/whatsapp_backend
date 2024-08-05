@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
+import { CookieOptions, Request, Response } from "express";
 import Twilio from "twilio";
+import UAParser from "ua-parser-js"
 import User, { IUser } from "../models/UserModel";
 import { v4 as uuidv4 } from 'uuid';
 import FancyError from "../utils/FancyError";
@@ -9,6 +10,8 @@ import asyncHandler from "express-async-handler"
 import { uploadImage, deleteImage } from "../utils/Cloudinary";
 import fs from "fs"
 import moment from "moment"
+import os from "os"
+
 const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 // const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 import { getSession, setSession, removeSession } from "../utils/session"
@@ -76,7 +79,25 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
       if (!user) {
         user = await User.create({ mobile: session.userDetails.mobile, socket_id: uuidv4() });
       }
-      return jwtToken(user, 201, res)
+      const deviceInfo = req.headers['user-agent'];
+      const parser = new UAParser(deviceInfo);
+      const token = await jwtToken(user)
+      console.log(parser.getBrowser().name, "browser name");
+
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 3); // Add 3 days
+      const options: CookieOptions = {
+        expires: expirationDate,
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      }
+      res.status(200).cookie('loginToken', token, options).json({
+        user,
+        sucess: true,
+        message: "user logged in sucessfully"
+      })
+
     } else {
       throw new FancyError("OTP incorrect or timeout, Try Again", 403)
     }

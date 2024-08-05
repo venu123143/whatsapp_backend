@@ -9,25 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const jwtToken = (user, statusCode, res) => __awaiter(void 0, void 0, void 0, function* () {
+const jwtToken = (user) => __awaiter(void 0, void 0, void 0, function* () {
     const token = yield user.generateAuthToken();
-    if (token !== undefined) {
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 3);
-        const options = {
-            expires: expirationDate,
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none'
-        };
-        res.status(statusCode).cookie('loginToken', token, options).json({
-            user,
-            sucess: true,
-            message: "user logged in sucessfully"
-        });
-    }
-    else {
-        console.log('token is undefined');
-    }
+    return token;
 });
 exports.default = jwtToken;
