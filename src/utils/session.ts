@@ -6,6 +6,11 @@ export const redisClient = createClient({ url: process.env.REDIS_URL });
 redisClient.connect().then(() => console.log("redis connected")).catch((err) => console.log(err))
 const store = new RedisStore({ client: redisClient })
 
+redisClient.info('memory').then((info) => {
+    const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
+    console.log(`socket memory usage: ${usedMemory} bytes`);
+});
+
 const ses = session({
     name: 'loginSession',
     store: store,

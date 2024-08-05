@@ -6,13 +6,11 @@ const jwtToken = async (user: IUser, statusCode: number, res: Response) => {
     if (token !== undefined) {
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 3); // Add 3 days
-        // maxAge: 24 * 60 * 60 * 1000 * 2,
-        // maxAge = 24 * 60 * 60 * 1000 = 1 day 
         const options: CookieOptions = {
             expires: expirationDate,
-            secure: true,
+            secure: process.env.NODE_ENV === 'production',
             httpOnly: true,
-            sameSite: 'none'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         }
         res.status(statusCode).cookie('loginToken', token, options).json({
             user,
