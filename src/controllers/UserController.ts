@@ -84,11 +84,11 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
       const token = await jwtToken(user)
 
       const safari = parser.getBrowser().name?.toLowerCase().includes('safari')
+      console.log(safari, parser.getBrowser().name);
       let sameSite = 'none'
       if (safari) {
-        sameSite = 'lax'
+        sameSite = 'strict'
       }
-      console.log(process.env.NODE_ENV === 'production');
 
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 3); // Add 3 days
