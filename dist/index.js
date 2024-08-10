@@ -12,9 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const redis_1 = require("redis");
 const socket_io_1 = require("socket.io");
-const redis_adapter_1 = require("@socket.io/redis-adapter");
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 require("dotenv/config");
@@ -79,30 +77,6 @@ process.on("unhandledRejection", (err) => {
         process.exit(1);
     });
 });
-const pubClient = (0, redis_1.createClient)({ url: process.env.REDIS_ADAPTOR });
-const subClient = pubClient.duplicate();
-let redisConnected = false;
-function connectRedis() {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        if (redisConnected)
-            return;
-        try {
-            yield pubClient.connect();
-            yield subClient.connect();
-            redisConnected = true;
-            console.log("Redis adapter connected");
-            io.adapter((0, redis_adapter_1.createAdapter)(pubClient, subClient));
-            const info = yield pubClient.info('memory');
-            const usedMemory = parseInt(((_a = info.split('\r\n').find(line => line.startsWith('used_memory:'))) === null || _a === void 0 ? void 0 : _a.split(':')[1]) || '0');
-            console.log(`Redis memory usage: ${usedMemory} bytes`);
-        }
-        catch (err) {
-            console.error("Redis adapter error:", err);
-        }
-    });
-}
-connectRedis();
 io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     console.log(`user ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.name} with UUID:- ${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id} is connected`);

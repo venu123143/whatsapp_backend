@@ -52,7 +52,7 @@ exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awa
     });
 }));
 exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _b, _c;
     const curOTP = (_b = req.body) === null || _b === void 0 ? void 0 : _b.otp;
     yield JoiSchemas_1.loginSchema.validateAsync(req.body);
     const enterOtp = curOTP.toString().replaceAll(",", "");
@@ -74,14 +74,19 @@ exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter
             const deviceInfo = req.headers['user-agent'];
             const parser = new ua_parser_js_1.default(deviceInfo);
             const token = yield (0, jwtToken_1.default)(user);
-            console.log(parser.getBrowser().name, "browser name");
+            const safari = (_c = parser.getBrowser().name) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes('safari');
+            console.log(safari, parser.getBrowser().name);
+            let sameSite = 'none';
+            if (safari) {
+                sameSite = 'strict';
+            }
             const expirationDate = new Date();
             expirationDate.setDate(expirationDate.getDate() + 3);
             const options = {
                 expires: expirationDate,
                 secure: process.env.NODE_ENV === 'production',
                 httpOnly: true,
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                sameSite: process.env.NODE_ENV === 'production' ? sameSite : 'strict',
             };
             res.status(200).cookie('loginToken', token, options).json({
                 user,
@@ -106,11 +111,11 @@ exports.logoutUser = (0, express_async_handler_1.default)((req, res) => __awaite
     res.clearCookie('loginToken', { path: '/' }).json({ message: 'User logged out successfully', success: true });
 }));
 exports.UpdateUser = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c, _d, _e;
+    var _d, _e, _f;
     const _id = req.params.id;
-    const name = (_c = req.body) === null || _c === void 0 ? void 0 : _c.name;
-    const about = (_d = req.body) === null || _d === void 0 ? void 0 : _d.about;
-    const profile = (_e = req.body) === null || _e === void 0 ? void 0 : _e.profile;
+    const name = (_d = req.body) === null || _d === void 0 ? void 0 : _d.name;
+    const about = (_e = req.body) === null || _e === void 0 ? void 0 : _e.about;
+    const profile = (_f = req.body) === null || _f === void 0 ? void 0 : _f.profile;
     try {
         const updatedUser = yield UserModel_1.default.findOneAndUpdate({ _id: _id }, {
             name,
@@ -144,8 +149,8 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 exports.getAllUsers = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f;
-    const loggedInUserId = (_f = req.user) === null || _f === void 0 ? void 0 : _f._id;
+    var _g;
+    const loggedInUserId = (_g = req.user) === null || _g === void 0 ? void 0 : _g._id;
     try {
         const users = yield UserModel_1.default.find({ _id: { $ne: loggedInUserId } });
         res.status(200).json(users);
