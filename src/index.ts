@@ -3,7 +3,7 @@
 // const newServer = server.listen(port, ip, () => {
 //     console.log(`server is running on port http://${ip}:${port}`);
 // });
-
+import fs from "fs"
 import { createClient } from "redis";
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
@@ -90,30 +90,30 @@ process.on("unhandledRejection", (err: Error) => {
     });
 });
 
-// Redis client and adapter
-const pubClient = createClient({ url: process.env.REDIS_ADAPTOR });
-const subClient = pubClient.duplicate();
+// // Redis client and adapter
+// const pubClient = createClient({ url: process.env.REDIS_ADAPTOR });
+// const subClient = pubClient.duplicate();
 
-let redisConnected = false;
+// let redisConnected = false;
 
-async function connectRedis() {
-    if (redisConnected) return;
-    try {
-        await pubClient.connect();
-        await subClient.connect();
-        redisConnected = true;
-        console.log("Redis adapter connected");
+// async function connectRedis() {
+//     if (redisConnected) return;
+//     try {
+//         await pubClient.connect();
+//         await subClient.connect();
+//         redisConnected = true;
+//         console.log("Redis adapter connected");
 
-        io.adapter(createAdapter(pubClient, subClient));
-        const info = await pubClient.info('memory');
-        const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
-        console.log(`Redis memory usage: ${usedMemory} bytes`);
-    } catch (err) {
-        console.error("Redis adapter error:", err);
-    }
-}
+//         io.adapter(createAdapter(pubClient, subClient));
+//         const info = await pubClient.info('memory');
+//         const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
+//         console.log(`Redis memory usage: ${usedMemory} bytes`);
+//     } catch (err) {
+//         console.error("Redis adapter error:", err);
+//     }
+// }
 
-connectRedis();
+// connectRedis();
 
 io.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user?.name} with UUID:- ${socket?.user?.socket_id} is connected`);
