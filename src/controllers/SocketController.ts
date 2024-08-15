@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { ExtendedError } from 'socket.io/dist/namespace';
+import { ExtendedError, Namespace } from 'socket.io/dist/namespace';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { redisClient } from "../utils/session"
 import { Server } from "socket.io";
@@ -8,7 +8,7 @@ export interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap,
     user?: any;
 }
 export interface IO extends Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> { }
-
+export interface ChatNamespace extends Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> { }
 
 export const getAllMessages = async (socket: CustomSocket) => {
     const currFrndList = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
@@ -65,13 +65,13 @@ export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: Exten
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
             console.log('user joined the call server');
-            
+
         }
         next()
     }
 
 }
-export const flushAllData = async (io: IO, socket: CustomSocket) => {
+export const flushAllData = async (io: ChatNamespace, socket: CustomSocket) => {
     // const rooms = io.sockets.adapter.rooms
     // console.log(rooms);
     try {
@@ -96,17 +96,19 @@ export const addFriend = async (socket: CustomSocket, user: any) => {
     } else {
         await redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
+    console.log(user);
+
     // const JsonFriend = await redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1)
     // const friendList = JsonFriend?.map((each) => JSON.parse(each));
     socket.emit("get_friends", user)
 }
-export const getFriends = async (socket: CustomSocket, io: IO, user: any) => {
+export const getFriends = async (socket: CustomSocket, io: ChatNamespace, user: any) => {
     const currFrndList = await redisClient.lRange(`friends:${user?.socket_id}`, 0, -1)
     const friendList = currFrndList?.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList)
 }
 
-export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
+export const sendMessage = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
     let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
     const { users, ...dataWithoutUsers } = data;
@@ -133,7 +135,7 @@ export const sendMessage = async (io: IO, socket: CustomSocket, data: any) => {
         console.error("Error sending message:", error);
     }
 }
-export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
+export const createGroup = async (io: ChatNamespace, socket: CustomSocket, group: any) => {
     const jsonStrngGrp = JSON.stringify(group);
     const users = group.users;
 
@@ -157,8 +159,8 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
-            const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
-            console.log(isUserInRoom, user?.name);
+            // const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
+            // console.log(isUserInRoom, user?.name);
 
             const msgObj = {
                 message: `${socket.user.name ? socket.user.name : socket.user.mobile} added ${user.name ? user.name : user.mobile} to the group`,
@@ -169,25 +171,25 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
                 right: false,
                 seen: false,
             }
-            if (isUserInRoom) {
-                let userSocket = await io.to(userSocketId).fetchSockets();
-                if (userSocket.length !== 0) {
-                    userSocket[0].join(group.socket_id);
-                    socket.to(user.socket_id).emit("get_friends", group)
-                    socket.to(group.socket_id).emit("recieve_message", msgObj)
-                }
-                const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
-                await redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
-
-
-                console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
-
-                // else {
-                //     console.warn(`User with ID ${userSocketId} is not connected.`);
-                // }
-            } else {
-                console.error(`User with ID ${userSocketId} is not a Socket.`);
+            // if (isUserInRoom) {
+            let userSocket = await io.to(userSocketId).fetchSockets();
+            if (userSocket.length !== 0) {
+                userSocket[0].join(group.socket_id);
+                socket.to(user.socket_id).emit("get_friends", group)
+                socket.to(group.socket_id).emit("recieve_message", msgObj)
             }
+            const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
+            await redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
+
+
+            console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
+
+            // else {
+            //     console.warn(`User with ID ${userSocketId} is not connected.`);
+            // }
+            // } else {
+            //     console.error(`User with ID ${userSocketId} is not a Socket.`);
+            // }
         } catch (error) {
             console.error("Error handling user:", error);
         }
@@ -200,7 +202,7 @@ export const createGroup = async (io: IO, socket: CustomSocket, group: any) => {
 
 };
 
-export const deleteMessage = async (io: IO, socket: CustomSocket, data: any) => {
+export const deleteMessage = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
     // const res = await redisClient.del(senderKey);
     const messageToRemove = JSON.stringify(data)
@@ -208,7 +210,7 @@ export const deleteMessage = async (io: IO, socket: CustomSocket, data: any) => 
     // console.log(res);
 
 }
-export const editMessage = async (io: IO, socket: CustomSocket, data: any) => {
+export const editMessage = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
     if (data.right === true) {
         const { users, ...withOutIndex } = data;
         const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
@@ -244,7 +246,7 @@ export const editMessage = async (io: IO, socket: CustomSocket, data: any) => {
 
     }
 }
-export const onlineStatus = async (io: any, socket: CustomSocket, data: any) => {
+export const onlineStatus = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
     const userStatus = await redisClient.hGet(`userId${data.recieverId}`, 'connected')
     const status = { recieverId: data.recieverId, status: userStatus }
     io.to(data.senderId).emit('user_status', status)

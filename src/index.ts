@@ -46,6 +46,7 @@ const io = new Server(server, {
     }
 });
 const callsNamespace = io.of("/calls");
+const chatNamespace = io.of("/chat");
 
 // CORS, JSON, and cookie-parser
 const options: CorsOptions = {
@@ -59,8 +60,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(session);
-io.use(socketMiddleware);
-io.use(authorizeUser);
+chatNamespace.use(socketMiddleware);
+chatNamespace.use(authorizeUser);
 callsNamespace.use(socketMiddleware);
 callsNamespace.use(JoinUserToOwnRoom);
 
@@ -115,7 +116,7 @@ process.on("unhandledRejection", (err: Error) => {
 
 // connectRedis();
 
-io.on("connect", async (socket: CustomSocket) => {
+chatNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user?.name} with UUID:- ${socket?.user?.socket_id} is connected`);
 
     socket.on('add_friend', (user: any) => {
@@ -123,19 +124,19 @@ io.on("connect", async (socket: CustomSocket) => {
     });
 
     socket.on('get_frnds_on_reload', (user) => {
-        getFriends(socket, io, user);
+        getFriends(socket, chatNamespace, user);
     });
 
     socket.on('online_status', (data: any) => {
-        onlineStatus(io, socket, data);
+        onlineStatus(chatNamespace, socket, data);
     });
 
     socket.on("send_message", (data: any) => {
-        sendMessage(io, socket, data);
+        sendMessage(chatNamespace, socket, data);
     });
 
     socket.on("edit_message", (data: any) => {
-        editMessage(io, socket, data);
+        editMessage(chatNamespace, socket, data);
     });
 
     socket.on("get_all_messages", () => {
@@ -143,7 +144,7 @@ io.on("connect", async (socket: CustomSocket) => {
     });
 
     socket.on("create_group", (group: any) => {
-        createGroup(io, socket, group);
+        createGroup(chatNamespace, socket, group);
     });
 
     socket.on("update_seen", (msg) => {

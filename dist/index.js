@@ -43,6 +43,7 @@ const io = new socket_io_1.Server(server, {
     }
 });
 const callsNamespace = io.of("/calls");
+const chatNamespace = io.of("/chat");
 const options = {
     origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
@@ -54,8 +55,8 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)());
 app.use((0, morgan_1.default)('dev'));
 app.use(session_1.default);
-io.use(ConnectSession_1.socketMiddleware);
-io.use(SocketController_1.authorizeUser);
+chatNamespace.use(ConnectSession_1.socketMiddleware);
+chatNamespace.use(SocketController_1.authorizeUser);
 callsNamespace.use(ConnectSession_1.socketMiddleware);
 callsNamespace.use(SocketController_1.JoinUserToOwnRoom);
 app.get('/', (req, res) => {
@@ -77,29 +78,29 @@ process.on("unhandledRejection", (err) => {
         process.exit(1);
     });
 });
-io.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
+chatNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     console.log(`user ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.name} with UUID:- ${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id} is connected`);
     socket.on('add_friend', (user) => {
         (0, SocketController_1.addFriend)(socket, user);
     });
     socket.on('get_frnds_on_reload', (user) => {
-        (0, SocketController_1.getFriends)(socket, io, user);
+        (0, SocketController_1.getFriends)(socket, chatNamespace, user);
     });
     socket.on('online_status', (data) => {
-        (0, SocketController_1.onlineStatus)(io, socket, data);
+        (0, SocketController_1.onlineStatus)(chatNamespace, socket, data);
     });
     socket.on("send_message", (data) => {
-        (0, SocketController_1.sendMessage)(io, socket, data);
+        (0, SocketController_1.sendMessage)(chatNamespace, socket, data);
     });
     socket.on("edit_message", (data) => {
-        (0, SocketController_1.editMessage)(io, socket, data);
+        (0, SocketController_1.editMessage)(chatNamespace, socket, data);
     });
     socket.on("get_all_messages", () => {
         (0, SocketController_1.getAllMessages)(socket);
     });
     socket.on("create_group", (group) => {
-        (0, SocketController_1.createGroup)(io, socket, group);
+        (0, SocketController_1.createGroup)(chatNamespace, socket, group);
     });
     socket.on("update_seen", (msg) => {
         (0, SocketController_1.updateSeen)(socket, msg);
