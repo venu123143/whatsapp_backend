@@ -109,6 +109,7 @@ const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* 
     else {
         yield session_1.redisClient.LPUSH(friendListKey, jsonStrngUser);
     }
+    console.log(user);
     socket.emit("get_friends", user);
 });
 exports.addFriend = addFriend;
@@ -166,8 +167,6 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
     for (const user of group.users) {
         try {
             const userSocketId = user.socket_id;
-            const isUserInRoom = io.sockets.adapter.rooms.has(userSocketId);
-            console.log(isUserInRoom, user === null || user === void 0 ? void 0 : user.name);
             const msgObj = {
                 message: `${socket.user.name ? socket.user.name : socket.user.mobile} added ${user.name ? user.name : user.mobile} to the group`,
                 msgType: "notification",
@@ -177,20 +176,15 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
                 right: false,
                 seen: false,
             };
-            if (isUserInRoom) {
-                let userSocket = yield io.to(userSocketId).fetchSockets();
-                if (userSocket.length !== 0) {
-                    userSocket[0].join(group.socket_id);
-                    socket.to(user.socket_id).emit("get_friends", group);
-                    socket.to(group.socket_id).emit("recieve_message", msgObj);
-                }
-                const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
-                yield session_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
-                console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
+            let userSocket = yield io.to(userSocketId).fetchSockets();
+            if (userSocket.length !== 0) {
+                userSocket[0].join(group.socket_id);
+                socket.to(user.socket_id).emit("get_friends", group);
+                socket.to(group.socket_id).emit("recieve_message", msgObj);
             }
-            else {
-                console.error(`User with ID ${userSocketId} is not a Socket.`);
-            }
+            const senderKey = `sender:${user.socket_id}-reciever:${group.socket_id}`;
+            yield session_1.redisClient.LPUSH(senderKey, JSON.stringify(msgObj));
+            console.log(`User ${userSocketId} joined group room ${group.socket_id}`);
         }
         catch (error) {
             console.error("Error handling user:", error);
