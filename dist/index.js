@@ -131,3 +131,4 @@ callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, funct
         socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
     });
 }));
+exports.default = app;
