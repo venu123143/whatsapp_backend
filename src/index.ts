@@ -186,3 +186,4 @@ callsNamespace.on("connect", async (socket: CustomSocket) => {
     });
 });
 
+export default app
