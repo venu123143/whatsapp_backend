@@ -27,6 +27,8 @@ import {
     JoinUserToOwnRoom
 } from "./controllers/SocketController";
 import { socketMiddleware } from "./config/ConnectSession"
+import { mkdirSync, existsSync } from 'fs';
+import path from 'path';
 
 import { instrument } from "@socket.io/admin-ui";
 
@@ -45,6 +47,12 @@ const io = new Server(server, {
         credentials: true,
     }
 });
+
+const uploadDirectory = path.join(__dirname, '../src/public/images');
+
+if (!existsSync(uploadDirectory)) {
+  mkdirSync(uploadDirectory, { recursive: true });
+}
 const callsNamespace = io.of("/calls");
 const chatNamespace = io.of("/chat");
 
