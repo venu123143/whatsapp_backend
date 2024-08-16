@@ -28,6 +28,8 @@ const GroupRoute_1 = __importDefault(require("./routes/GroupRoute"));
 const CallsRoute_1 = __importDefault(require("./routes/CallsRoute"));
 const SocketController_1 = require("./controllers/SocketController");
 const ConnectSession_1 = require("./config/ConnectSession");
+const fs_1 = require("fs");
+const path_1 = __importDefault(require("path"));
 const admin_ui_1 = require("@socket.io/admin-ui");
 process.on("uncaughtException", (err) => {
     console.error("Uncaught Exception:", err);
@@ -42,6 +44,10 @@ const io = new socket_io_1.Server(server, {
         credentials: true,
     }
 });
+const uploadDirectory = path_1.default.join(__dirname, '../src/public/images');
+if (!(0, fs_1.existsSync)(uploadDirectory)) {
+    (0, fs_1.mkdirSync)(uploadDirectory, { recursive: true });
+}
 const callsNamespace = io.of("/calls");
 const chatNamespace = io.of("/chat");
 const options = {
