@@ -81,24 +81,26 @@ process.on("unhandledRejection", (err) => {
 chatNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     console.log(`user ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.name} with UUID:- ${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id} is connected`);
-    socket.on('add_friend', (user) => {
-        (0, SocketController_1.addFriend)(socket, user);
-    });
-    socket.on('get_frnds_on_reload', (user) => {
-        (0, SocketController_1.getFriends)(socket, chatNamespace, user);
+    socket.on('create_connection', (userIds, connType, ConnectionInfo, callback) => {
+        (0, SocketController_1.createConnection)(socket, userIds, connType, ConnectionInfo, callback);
     });
     socket.on('online_status', (data) => {
         (0, SocketController_1.onlineStatus)(chatNamespace, socket, data);
     });
-    socket.on("send_message", (data) => {
-        (0, SocketController_1.sendMessage)(chatNamespace, socket, data);
+    socket.on("send_message", (data, callback) => {
+        (0, SocketController_1.sendMessage)(chatNamespace, socket, data, callback);
     });
-    socket.on("edit_message", (data) => {
-        (0, SocketController_1.editMessage)(chatNamespace, socket, data);
+    socket.on("edit_message", (data, callback) => {
+        (0, SocketController_1.editMessage)(chatNamespace, socket, data, callback);
     });
-    socket.on("get_all_messages", () => {
-        (0, SocketController_1.getAllMessages)(socket);
-    });
+    socket.on("get_all_messages", (input, callback) => __awaiter(void 0, void 0, void 0, function* () {
+        if (typeof callback === 'function') {
+            yield (0, SocketController_1.getAllMessages)(socket, callback);
+        }
+        else {
+            console.error("Callback is not a function");
+        }
+    }));
     socket.on("create_group", (group) => {
         (0, SocketController_1.createGroup)(chatNamespace, socket, group);
     });

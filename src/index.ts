@@ -24,11 +24,13 @@ import {
     authorizeUser, CustomSocket, flushAllData,
     sendMessage, createGroup, updateSeen, getFriends,
     addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage,
-    JoinUserToOwnRoom
+    JoinUserToOwnRoom,
+    createConnection
 } from "./controllers/SocketController";
 import { socketMiddleware } from "./config/ConnectSession"
 
 import { instrument } from "@socket.io/admin-ui";
+import { ConnectionType } from "models/Connection";
 
 // Handle uncaught Exception
 process.on("uncaughtException", (err) => {
@@ -119,29 +121,35 @@ process.on("unhandledRejection", (err: Error) => {
 chatNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user?.name} with UUID:- ${socket?.user?.socket_id} is connected`);
 
-    socket.on('add_friend', (user: any) => {
-        addFriend(socket, user);
+    socket.on('create_connection', (userIds: string[], connType: ConnectionType, ConnectionInfo: any, callback: any) => {
+        createConnection(socket, userIds, connType, ConnectionInfo, callback);
     });
 
-    socket.on('get_frnds_on_reload', (user) => {
-        getFriends(socket, chatNamespace, user);
-    });
+    // socket.on('get_frnds_on_reload', (user) => {
+    //     getFriends(socket, chatNamespace, user);
+    // });
 
     socket.on('online_status', (data: any) => {
         onlineStatus(chatNamespace, socket, data);
     });
 
-    socket.on("send_message", (data: any) => {
-        sendMessage(chatNamespace, socket, data);
+    socket.on("send_message", (data: any, callback: any) => {
+        sendMessage(chatNamespace, socket, data, callback);
     });
 
-    socket.on("edit_message", (data: any) => {
-        editMessage(chatNamespace, socket, data);
+    socket.on("edit_message", (data: any, callback) => {
+        editMessage(chatNamespace, socket, data, callback);
     });
 
-    socket.on("get_all_messages", () => {
-        getAllMessages(socket);
+    socket.on("get_all_messages", async (input: any, callback: any) => {
+        if (typeof callback === 'function') {
+            await getAllMessages(socket, callback);
+        } else {
+            console.error("Callback is not a function");
+        }
     });
+
+
 
     socket.on("create_group", (group: any) => {
         createGroup(chatNamespace, socket, group);

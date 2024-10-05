@@ -19,40 +19,204 @@ var __rest = (this && this.__rest) || function (s, e) {
         }
     return t;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.sendMessage = exports.getFriends = exports.addFriend = exports.flushAllData = exports.JoinUserToOwnRoom = exports.authorizeUser = exports.getAllMessages = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.removeMessage = exports.sendMessage = exports.getFriends = exports.createConnection = exports.addFriend = exports.flushAllData = exports.JoinUserToOwnRoom = exports.authorizeUser = exports.getAllMessages = void 0;
 const session_1 = require("../utils/session");
-const getAllMessages = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    const currFrndList = yield session_1.redisClient.lRange(`friends:${socket.user.socket_id}`, 0, -1);
-    const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
-    const res = yield Promise.all(friendList.map((friend) => __awaiter(void 0, void 0, void 0, function* () {
-        const senderKey = `sender:${socket.user.socket_id}-reciever:${friend.socket_id}`;
-        const userChat = yield session_1.redisClient.lRange(senderKey, 0, -1);
-        if (friend.users && friend.users.length > 0) {
-            socket.join(friend.socket_id);
-        }
-        const curr_chat = userChat === null || userChat === void 0 ? void 0 : userChat.map((each) => JSON.parse(each)).reverse();
-        const lastMessageIndex = curr_chat.length - 1;
-        const lastMessage = lastMessageIndex >= 0 ? curr_chat[lastMessageIndex] : null;
-        return Object.assign(Object.assign({}, friend), { chat: curr_chat, lastMessage: lastMessage });
-    })));
-    const sortedRes = res.sort((a, b) => {
-        const lastMessageA = a.lastMessage;
-        const lastMessageB = b.lastMessage;
-        if (!lastMessageA && !lastMessageB) {
-            return 0;
-        }
-        else if (!lastMessageA) {
-            return 1;
-        }
-        else if (!lastMessageB) {
-            return -1;
-        }
-        else {
-            return new Date(lastMessageB.date).getTime() - new Date(lastMessageA.date).getTime();
-        }
-    });
-    socket.emit("get_all_messages_on_reload", sortedRes);
+const dbCalls_1 = __importDefault(require("../database/dbCalls"));
+const mongoose_1 = require("mongoose");
+const Connection_1 = __importDefault(require("../models/Connection"));
+const ChatModel_1 = __importDefault(require("../models/ChatModel"));
+const UserModel_1 = __importDefault(require("../models/UserModel"));
+const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const currentUser = socket.user;
+        const aggrigateQuery = [
+            {
+                $match: {
+                    users: new mongoose_1.Types.ObjectId(currentUser._id),
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "users",
+                    foreignField: "_id",
+                    as: "usersData"
+                }
+            },
+            {
+                $lookup: {
+                    from: "messages",
+                    let: { roomId: "$room_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [
+                                        { $toString: "$room_id" },
+                                        "$$roomId"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $addFields: {
+                                isMyMsg: {
+                                    $eq: ["$sender.id", currentUser._id.toString()]
+                                },
+                                send: true,
+                            }
+                        },
+                        {
+                            $sort: { date: 1 }
+                        },
+                        {
+                            $limit: 100
+                        }
+                    ],
+                    as: "messages"
+                }
+            },
+            {
+                $addFields: {
+                    lastMessage: {
+                        $arrayElemAt: ["$messages", -1]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    otherUser: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "onetoone"] },
+                            then: {
+                                $arrayElemAt: [
+                                    {
+                                        $filter: {
+                                            input: "$usersData",
+                                            cond: {
+                                                $ne: ["$$this._id", new mongoose_1.Types.ObjectId(currentUser._id)]
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            else: null
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    unreadCount: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "onetoone"] },
+                            then: {
+                                $size: {
+                                    $filter: {
+                                        input: "$messages",
+                                        cond: {
+                                            $and: [
+                                                { $eq: ["$$this.seen", false] },
+                                                { $ne: ["$$this.sender.id", currentUser._id] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            else: "$unreadCount"
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    room_id: 1,
+                    conn_type: 1,
+                    messages: 1,
+                    lastMessage: 1,
+                    display_name: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "onetoone"] },
+                            then: {
+                                $cond: {
+                                    if: { $ifNull: ["$otherUser.name", false] },
+                                    then: "$otherUser.name",
+                                    else: "$otherUser.mobile"
+                                }
+                            },
+                            else: "$conn_name"
+                        }
+                    },
+                    profile: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "onetoone"] },
+                            then: "$otherUser.profile",
+                            else: "$profile"
+                        }
+                    },
+                    about: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "onetoone"] },
+                            then: null,
+                            else: "$about"
+                        }
+                    },
+                    users: {
+                        $cond: {
+                            if: { $eq: ["$conn_type", "group"] },
+                            then: {
+                                $map: {
+                                    input: "$usersData",
+                                    as: "user",
+                                    in: {
+                                        _id: "$$user._id",
+                                        name: "$$user.name",
+                                        phoneNumber: "$$user.mobile",
+                                        display_name: {
+                                            $cond: {
+                                                if: { $ifNull: ["$$user.name", false] },
+                                                then: "$$user.name",
+                                                else: "$$user.mobile"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            else: null
+                        }
+                    },
+                    admins: 1,
+                    online_status: 1,
+                    unreadCount: 1
+                }
+            },
+            {
+                $sort: { "lastMessage.date": -1 }
+            },
+            {
+                $limit: 100
+            }
+        ];
+        const connections = yield Connection_1.default.aggregate(aggrigateQuery);
+        const roomIds = connections.map((conn) => conn.room_id);
+        socket.join(roomIds);
+        callback({
+            status: true,
+            connections: connections
+        });
+    }
+    catch (error) {
+        console.error("Error fetching connections and messages:", error);
+        callback({
+            status: false,
+            error: "Failed to fetch connections and messages"
+        });
+    }
 });
 exports.getAllMessages = getAllMessages;
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -66,7 +230,6 @@ const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, functi
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
         }
-        yield (0, exports.getAllMessages)(socket);
         next();
     }
 });
@@ -113,13 +276,67 @@ const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* 
     socket.emit("get_friends", user);
 });
 exports.addFriend = addFriend;
+const createConnection = (socket, userIds, connType, ConnectionInfo, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        let newConnection;
+        switch (connType) {
+            case "onetoone":
+                const friend = yield UserModel_1.default.findOne({ _id: userIds[0] });
+                if (!friend) {
+                    callback({ error: `No user exists ` });
+                    return;
+                }
+                newConnection = new Connection_1.default({
+                    room_id: new mongoose_1.Types.ObjectId().toString(),
+                    conn_type: 'onetoone',
+                    users: [userIds[0], socket.user._id],
+                    admins: [socket.user._id],
+                    createdBy: socket.user._id
+                });
+                yield newConnection.save();
+                break;
+            case "group":
+                newConnection = new Connection_1.default({
+                    room_id: new mongoose_1.Types.ObjectId().toString(),
+                    conn_type: 'group',
+                    users: [...userIds, socket.user._id],
+                    admins: [socket.user._id],
+                    conn_name: ConnectionInfo.conn_name,
+                    about: ConnectionInfo.about,
+                    createdBy: socket.user._id
+                });
+                yield newConnection.save();
+                callback({ success: `${connType} created successfully` });
+                break;
+            default:
+                break;
+        }
+        socket.to(userIds).emit("new_connection", newConnection);
+    }
+    catch (error) {
+        callback({ error: `error while creating the ${connType}` });
+    }
+});
+exports.createConnection = createConnection;
 const getFriends = (socket, io, user) => __awaiter(void 0, void 0, void 0, function* () {
     const currFrndList = yield session_1.redisClient.lRange(`friends:${user === null || user === void 0 ? void 0 : user.socket_id}`, 0, -1);
     const friendList = currFrndList === null || currFrndList === void 0 ? void 0 : currFrndList.map((each) => JSON.parse(each));
     socket.emit("get_friends", friendList);
 });
 exports.getFriends = getFriends;
-const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
+const sendMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const message = yield dbCalls_1.default.createMessage(data);
+        callback(Object.assign(Object.assign({}, message.toJSON()), { send: true, isMyMsg: true }));
+        socket.to(data.room_id).emit("recieve_message", Object.assign(Object.assign({}, message.toJSON()), { send: true, isMyMsg: false }));
+    }
+    catch (error) {
+        callback({ error: "Error while sending message." });
+        console.error("Error sending message:", error);
+    }
+});
+exports.sendMessage = sendMessage;
+const removeMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
     const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
     let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
     const { users } = data, dataWithoutUsers = __rest(data, ["users"]);
@@ -127,24 +344,14 @@ const sendMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, func
     const recieverMsg = JSON.stringify(Object.assign(Object.assign({}, dataWithoutUsers), { right: false }));
     try {
         socket.to(data.recieverId).emit("recieve_message", data);
-        yield session_1.redisClient.LPUSH(senderKey, senderMsg);
-        if (data.conn_type === 'group') {
-            for (const user of data.users) {
-                if (user.socket_id !== socket.user.socket_id) {
-                    recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`;
-                    yield session_1.redisClient.LPUSH(recieverKey, recieverMsg);
-                }
-            }
-        }
-        else {
-            yield session_1.redisClient.LPUSH(recieverKey, recieverMsg);
-        }
+        yield session_1.redisClient.LREM(senderKey, 1, senderMsg);
+        yield session_1.redisClient.LREM(recieverKey, 1, recieverMsg);
     }
     catch (error) {
-        console.error("Error sending message:", error);
+        console.error("Error removing message:", error);
     }
 });
-exports.sendMessage = sendMessage;
+exports.removeMessage = removeMessage;
 const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, function* () {
     const jsonStrngGrp = JSON.stringify(group);
     const users = group.users;
@@ -199,35 +406,14 @@ const deleteMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, fu
     session_1.redisClient.LREM(senderKey, 0, messageToRemove);
 });
 exports.deleteMessage = deleteMessage;
-const editMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
-    if (data.right === true) {
-        const { users } = data, withOutIndex = __rest(data, ["users"]);
-        const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
-        let recieverKey = `sender:${data.recieverId}-reciever:${data.senderId}`;
-        const currentChat = yield session_1.redisClient.lRange(senderKey, 0, -1);
-        const msgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
-        yield session_1.redisClient.LSET(senderKey, msgIndex, JSON.stringify(withOutIndex));
-        if (data.conn_type === 'group') {
-            for (const user of users) {
-                if (user.socket_id !== socket.user.socket_id) {
-                    recieverKey = `sender:${user.socket_id}-reciever:${data.recieverId}`;
-                    const currentChat = yield session_1.redisClient.lRange(recieverKey, 0, -1);
-                    const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
-                    yield session_1.redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
-                }
-            }
-        }
-        else {
-            const currentChat = yield session_1.redisClient.lRange(recieverKey, 0, -1);
-            const recMsgIndex = currentChat.findIndex(each => JSON.parse(each).date === data.date);
-            yield session_1.redisClient.LSET(recieverKey, recMsgIndex, JSON.stringify(Object.assign(Object.assign({}, withOutIndex), { right: false })));
-        }
-        const updatedChatSender = yield session_1.redisClient.lRange(senderKey, 0, -1);
-        const updatedChatReciever = yield session_1.redisClient.lRange(recieverKey, 0, -1);
-        const recChat = updatedChatReciever.map(each => JSON.parse(each)).reverse();
-        socket.to(data.recieverId).emit("update_msg", recChat);
-        const sendChat = updatedChatSender.map(each => JSON.parse(each)).reverse();
-        io.to(data.senderId).emit("update_msg", sendChat);
+const editMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    if (data.isMyMsg === true) {
+        const updatedMessage = yield ChatModel_1.default.findByIdAndUpdate(data._id, {
+            message: data.message,
+            date: new Date().toISOString()
+        }, { new: true });
+        callback(Object.assign(Object.assign({}, updatedMessage === null || updatedMessage === void 0 ? void 0 : updatedMessage.toJSON()), { send: true, isMyMsg: true }));
+        socket.broadcast.to(data.room_id).emit("update_msg", Object.assign(Object.assign({}, updatedMessage === null || updatedMessage === void 0 ? void 0 : updatedMessage.toJSON()), { send: true, isMyMsg: false }));
     }
 });
 exports.editMessage = editMessage;

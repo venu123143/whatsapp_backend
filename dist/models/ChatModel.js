@@ -24,18 +24,24 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const chatSchema = new mongoose_1.default.Schema({
-    senderId: {
-        type: mongoose_1.default.Schema.Types.ObjectId,
+const ChatMessageSchema = new mongoose_1.Schema({
+    room_id: { type: mongoose_1.Types.ObjectId, required: true },
+    message: { type: String, required: true },
+    date: { type: String, required: true },
+    msgType: { type: String, enum: ['text', 'image', 'audio', 'file'], required: true },
+    sender: {
+        id: { type: String, required: true },
+        name: { type: String, required: false },
+        mobile: { type: String, required: true },
     },
-    recieverId: {
-        type: mongoose_1.default.Schema.Types.ObjectId,
-    },
-    messages: [
-        {
-            type: mongoose_1.Schema.Types.ObjectId,
-            ref: "Message",
-        },
-    ],
-}, { collection: "chats", timestamps: true, versionKey: false, });
-exports.default = mongoose_1.default.model("Chat", chatSchema);
+    conn_type: { type: String, enum: ['group', 'onetoone'], required: true },
+    file: { type: String, required: false },
+    seen: { type: Boolean, required: true, default: false },
+    replyFor: {
+        id: { type: String, required: false },
+        message: { type: String, required: false },
+        name: { type: String, required: false }
+    }
+}, { versionKey: false });
+const ChatMessageModel = mongoose_1.default.model('Message', ChatMessageSchema);
+exports.default = ChatMessageModel;

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start:ts": "tsc -w",
-    "start:js": "nodemon dist/index.js",
+    "start:js": "nodemon ./dist/index.js",
     "start": "npm-run-all --parallel start:ts start:js",
     "prodStart": "node ./dist/index.js"
   },
