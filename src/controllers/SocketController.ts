@@ -164,27 +164,21 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                             }
                         },
                         users: {
-                            $cond: {
-                                if: { $eq: ["$conn_type", "group"] },
-                                then: {
-                                    $map: {
-                                        input: "$usersData",
-                                        as: "user",
-                                        in: {
-                                            _id: "$$user._id",
-                                            name: "$$user.name",
-                                            phoneNumber: "$$user.mobile",
-                                            display_name: {
-                                                $cond: {
-                                                    if: { $ifNull: ["$$user.name", false] },
-                                                    then: "$$user.name",
-                                                    else: "$$user.mobile"
-                                                }
-                                            }
+                            $map: {
+                                input: "$usersData",
+                                as: "user",
+                                in: {
+                                    _id: "$$user._id",
+                                    name: "$$user.name",
+                                    phoneNumber: "$$user.mobile",
+                                    display_name: {
+                                        $cond: {
+                                            if: { $ifNull: ["$$user.name", false] },
+                                            then: "$$user.name",
+                                            else: "$$user.mobile"
                                         }
                                     }
-                                },
-                                else: null
+                                }
                             }
                         },
                         admins: 1,
@@ -203,6 +197,7 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
         const connections = await Connection.aggregate(aggrigateQuery)
         const roomIds = connections.map((conn) => conn.room_id)
         socket.join(roomIds)
+        await redisClient.hSet(`userId${socket.user?._id}`, 'connected', 'true');
         callback({
             status: true,
             connections: connections
@@ -426,14 +421,6 @@ export const createGroup = async (io: ChatNamespace, socket: CustomSocket, group
 
 };
 
-export const deleteMessage = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
-    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
-    // const res = await redisClient.del(senderKey);
-    const messageToRemove = JSON.stringify(data)
-    redisClient.LREM(senderKey, 0, messageToRemove)
-    // console.log(res);
-
-}
 export const editMessage = async (io: ChatNamespace, socket: CustomSocket, data: any, callback: any) => {
     if (data.isMyMsg === true) {
         const updatedMessage = await ChatModel.findByIdAndUpdate(
@@ -450,14 +437,34 @@ export const editMessage = async (io: ChatNamespace, socket: CustomSocket, data:
 
     }
 }
-export const onlineStatus = async (io: ChatNamespace, socket: CustomSocket, data: any) => {
-    const userStatus = await redisClient.hGet(`userId${data.recieverId}`, 'connected')
-    const status = { recieverId: data.recieverId, status: userStatus }
-    io.to(data.senderId).emit('user_status', status)
+export const deleteMessage = async (io: ChatNamespace, socket: CustomSocket, data: any, callback: any) => {
+    if (data.isMyMsg === true) {
+        const updatedMessage = await ChatModel.findByIdAndUpdate(
+            data._id,
+            {
+                message: 'This message is deleted.',
+                date: new Date().toISOString(),
+            },
+            { new: true }
+        );
+        callback({ ...updatedMessage?.toJSON(), send: true, isMyMsg: true })
+        socket.broadcast.to(data.room_id).emit("delete_msg", { ...updatedMessage?.toJSON(), send: true, isMyMsg: false })
+    }
+}
+export const onlineStatus = async (data: any, callback: any) => {
+    const userStatus = await redisClient.hGet(`userId${data.user_id._id}`, 'connected')
+    if (data.user_id) {
+        await ChatModel.updateMany(
+            { "sender.id": data.user_id._id, room_id: new Types.ObjectId(data.room_id) },
+            { seen: true },
+        );
+    }
+
+    callback({ ...data, online_status: userStatus === 'true' ? true : false })
 }
 export const onDisconnect = async (socket: CustomSocket) => {
     console.log("disconnecting.", socket.user.name);
-    await redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" })
+    await redisClient.hSet(`userId${socket.user?._id}`, 'connected', 'false');
     socket.user = null;
     socket.disconnect(true);
 }

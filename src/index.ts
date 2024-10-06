@@ -25,7 +25,8 @@ import {
     sendMessage, createGroup, updateSeen, getFriends,
     addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage,
     JoinUserToOwnRoom,
-    createConnection
+    createConnection,
+    deleteMessage
 } from "./controllers/SocketController";
 import { socketMiddleware } from "./config/ConnectSession"
 
@@ -129,8 +130,8 @@ chatNamespace.on("connect", async (socket: CustomSocket) => {
     //     getFriends(socket, chatNamespace, user);
     // });
 
-    socket.on('online_status', (data: any) => {
-        onlineStatus(chatNamespace, socket, data);
+    socket.on('online_status', (data: any, callback: any) => {
+        onlineStatus(data, callback);
     });
 
     socket.on("send_message", (data: any, callback: any) => {
@@ -139,6 +140,9 @@ chatNamespace.on("connect", async (socket: CustomSocket) => {
 
     socket.on("edit_message", (data: any, callback) => {
         editMessage(chatNamespace, socket, data, callback);
+    });
+    socket.on("delete_message", (data: any, callback) => {
+        deleteMessage(chatNamespace, socket, data, callback);
     });
 
     socket.on("get_all_messages", async (input: any, callback: any) => {

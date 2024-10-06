@@ -84,14 +84,17 @@ chatNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, functi
     socket.on('create_connection', (userIds, connType, ConnectionInfo, callback) => {
         (0, SocketController_1.createConnection)(socket, userIds, connType, ConnectionInfo, callback);
     });
-    socket.on('online_status', (data) => {
-        (0, SocketController_1.onlineStatus)(chatNamespace, socket, data);
+    socket.on('online_status', (data, callback) => {
+        (0, SocketController_1.onlineStatus)(data, callback);
     });
     socket.on("send_message", (data, callback) => {
         (0, SocketController_1.sendMessage)(chatNamespace, socket, data, callback);
     });
     socket.on("edit_message", (data, callback) => {
         (0, SocketController_1.editMessage)(chatNamespace, socket, data, callback);
+    });
+    socket.on("delete_message", (data, callback) => {
+        (0, SocketController_1.deleteMessage)(chatNamespace, socket, data, callback);
     });
     socket.on("get_all_messages", (input, callback) => __awaiter(void 0, void 0, void 0, function* () {
         if (typeof callback === 'function') {

@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.editMessage = exports.deleteMessage = exports.createGroup = exports.removeMessage = exports.sendMessage = exports.getFriends = exports.createConnection = exports.addFriend = exports.flushAllData = exports.JoinUserToOwnRoom = exports.authorizeUser = exports.getAllMessages = void 0;
+exports.updateSeen = exports.onDisconnect = exports.onlineStatus = exports.deleteMessage = exports.editMessage = exports.createGroup = exports.removeMessage = exports.sendMessage = exports.getFriends = exports.createConnection = exports.addFriend = exports.flushAllData = exports.JoinUserToOwnRoom = exports.authorizeUser = exports.getAllMessages = void 0;
 const session_1 = require("../utils/session");
 const dbCalls_1 = __importDefault(require("../database/dbCalls"));
 const mongoose_1 = require("mongoose");
@@ -31,6 +31,7 @@ const Connection_1 = __importDefault(require("../models/Connection"));
 const ChatModel_1 = __importDefault(require("../models/ChatModel"));
 const UserModel_1 = __importDefault(require("../models/UserModel"));
 const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const currentUser = socket.user;
         const aggrigateQuery = [
@@ -167,27 +168,21 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
                         }
                     },
                     users: {
-                        $cond: {
-                            if: { $eq: ["$conn_type", "group"] },
-                            then: {
-                                $map: {
-                                    input: "$usersData",
-                                    as: "user",
-                                    in: {
-                                        _id: "$$user._id",
-                                        name: "$$user.name",
-                                        phoneNumber: "$$user.mobile",
-                                        display_name: {
-                                            $cond: {
-                                                if: { $ifNull: ["$$user.name", false] },
-                                                then: "$$user.name",
-                                                else: "$$user.mobile"
-                                            }
-                                        }
+                        $map: {
+                            input: "$usersData",
+                            as: "user",
+                            in: {
+                                _id: "$$user._id",
+                                name: "$$user.name",
+                                phoneNumber: "$$user.mobile",
+                                display_name: {
+                                    $cond: {
+                                        if: { $ifNull: ["$$user.name", false] },
+                                        then: "$$user.name",
+                                        else: "$$user.mobile"
                                     }
                                 }
-                            },
-                            else: null
+                            }
                         }
                     },
                     admins: 1,
@@ -205,6 +200,7 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
         const connections = yield Connection_1.default.aggregate(aggrigateQuery);
         const roomIds = connections.map((conn) => conn.room_id);
         socket.join(roomIds);
+        yield session_1.redisClient.hSet(`userId${(_a = socket.user) === null || _a === void 0 ? void 0 : _a._id}`, 'connected', 'true');
         callback({
             status: true,
             connections: connections
@@ -220,12 +216,12 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
 });
 exports.getAllMessages = getAllMessages;
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _b, _c;
     if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     }
     else {
-        yield session_1.redisClient.hSet(`userId${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.socket_id}`, { "userId": (_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id.toString(), "connected": "true" });
+        yield session_1.redisClient.hSet(`userId${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id}`, { "userId": (_c = socket === null || socket === void 0 ? void 0 : socket.user) === null || _c === void 0 ? void 0 : _c.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
@@ -400,12 +396,6 @@ const createGroup = (io, socket, group) => __awaiter(void 0, void 0, void 0, fun
     socket.to(group.socket_id).emit("recieve_message", grpCreateAck);
 });
 exports.createGroup = createGroup;
-const deleteMessage = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
-    const senderKey = `sender:${data.senderId}-reciever:${data.recieverId}`;
-    const messageToRemove = JSON.stringify(data);
-    session_1.redisClient.LREM(senderKey, 0, messageToRemove);
-});
-exports.deleteMessage = deleteMessage;
 const editMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, void 0, function* () {
     if (data.isMyMsg === true) {
         const updatedMessage = yield ChatModel_1.default.findByIdAndUpdate(data._id, {
@@ -417,15 +407,29 @@ const editMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, vo
     }
 });
 exports.editMessage = editMessage;
-const onlineStatus = (io, socket, data) => __awaiter(void 0, void 0, void 0, function* () {
-    const userStatus = yield session_1.redisClient.hGet(`userId${data.recieverId}`, 'connected');
-    const status = { recieverId: data.recieverId, status: userStatus };
-    io.to(data.senderId).emit('user_status', status);
+const deleteMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    if (data.isMyMsg === true) {
+        const updatedMessage = yield ChatModel_1.default.findByIdAndUpdate(data._id, {
+            message: 'This message is deleted.',
+            date: new Date().toISOString(),
+        }, { new: true });
+        callback(Object.assign(Object.assign({}, updatedMessage === null || updatedMessage === void 0 ? void 0 : updatedMessage.toJSON()), { send: true, isMyMsg: true }));
+        socket.broadcast.to(data.room_id).emit("delete_msg", Object.assign(Object.assign({}, updatedMessage === null || updatedMessage === void 0 ? void 0 : updatedMessage.toJSON()), { send: true, isMyMsg: false }));
+    }
+});
+exports.deleteMessage = deleteMessage;
+const onlineStatus = (data, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    const userStatus = yield session_1.redisClient.hGet(`userId${data.user_id._id}`, 'connected');
+    if (data.user_id) {
+        yield ChatModel_1.default.updateMany({ "sender.id": data.user_id._id, room_id: new mongoose_1.Types.ObjectId(data.room_id) }, { seen: true });
+    }
+    callback(Object.assign(Object.assign({}, data), { online_status: userStatus === 'true' ? true : false }));
 });
 exports.onlineStatus = onlineStatus;
 const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    var _d;
     console.log("disconnecting.", socket.user.name);
-    yield session_1.redisClient.hSet(`userId${socket.user.socket_id}`, { "userId": socket.user.socket_id.toString(), "connected": "false" });
+    yield session_1.redisClient.hSet(`userId${(_d = socket.user) === null || _d === void 0 ? void 0 : _d._id}`, 'connected', 'false');
     socket.user = null;
     socket.disconnect(true);
 });
