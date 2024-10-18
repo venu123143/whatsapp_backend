@@ -53,7 +53,7 @@ const chatNamespace = io.of("/chat");
 
 // CORS, JSON, and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:5173', 'http://192.168.0.175:5173', 'http://192.168.1.37:5173', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com/', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
     exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 };
