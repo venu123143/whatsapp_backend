@@ -230,12 +230,11 @@ export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: Exten
     if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     } else {
-        const userRooms = Array.from(socket.rooms);
-        if (!userRooms.includes(socket.user.socket_id)) {
-            socket.join(socket.user.socket_id);
-            console.log('user joined the call server');
-
-        }
+        // const userRooms = Array.from(socket.rooms);
+        // if (!userRooms.includes(socket.user.socket_id)) {
+        //     socket.join(socket.user.socket_id);
+        //     console.log('user joined the call server');
+        // }
         next()
     }
 

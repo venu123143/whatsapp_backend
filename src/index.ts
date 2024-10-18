@@ -168,25 +168,29 @@ chatNamespace.on("connect", async (socket: CustomSocket) => {
 
 callsNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`calls namespace is connected with id: ${socket.id}`);
-
+    socket.on('join_room', (data, callback) => {
+        socket.join(data)
+        callback({ message: "room joined" })
+    })
     socket.on('ice-candidate-offer', (data) => {
-        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: socket.user.socket_id });
+        // socket.user.socket_id
+        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: data.to });
     });
 
     socket.on('ice-candidate-answer', (data) => {
-        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: socket.user.socket_id });
+        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: data.to });
     });
 
     socket.on("call-offer", (data) => {
-        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user._id });
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: data.to });
     });
 
     socket.on("call-answer", (data) => {
-        socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
+        socket.to(data.to).emit("call-answer", { answer: data.answer, from: data.to });
     });
 
     socket.on("stop-call", (data) => {
-        socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
+        socket.to(data.to).emit("stop-call", { from: data.to66 });
     });
 });
 
