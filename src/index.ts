@@ -44,7 +44,7 @@ const app: Application = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
+        origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
         credentials: true,
     }
 });
@@ -53,7 +53,7 @@ const chatNamespace = io.of("/chat");
 
 // CORS, JSON, and cookie-parser
 const options: CorsOptions = {
-    origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com/', 'https://whatsapp-chat-imbu.onrender.com'],
+    origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://whatsapp-chat-imbu.onrender.com'],
     credentials: true,
     exposedHeaders: ["sessionID", "sessionId", "sessionid"]
 };
