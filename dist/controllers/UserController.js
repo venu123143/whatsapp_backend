@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsers = exports.updateProfile = exports.UpdateUser = exports.logoutUser = exports.verifyOtp = exports.SendOtpViaSms = void 0;
+exports.deleteFromS3 = exports.uploadImagesToS3 = exports.getAllUsers = exports.updateProfile = exports.UpdateUser = exports.logoutUser = exports.verifyOtp = exports.SendOtpViaSms = void 0;
 const twilio_1 = __importDefault(require("twilio"));
 const ua_parser_js_1 = __importDefault(require("ua-parser-js"));
 const UserModel_1 = __importDefault(require("../models/UserModel"));
@@ -26,6 +26,7 @@ const fs_1 = __importDefault(require("fs"));
 const moment_1 = __importDefault(require("moment"));
 const client = (0, twilio_1.default)(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 const session_1 = require("../utils/session");
+const S3Storage_1 = require("../utils/S3Storage");
 const sendTextMessage = (mobile, otp) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const msg = yield client.messages.create({
@@ -156,6 +157,47 @@ exports.getAllUsers = (0, express_async_handler_1.default)((req, res) => __await
         res.status(200).json(users);
     }
     catch (error) {
+        throw new FancyError_1.default("Unable to Fetch the Users, Try again", 400);
+    }
+}));
+exports.uploadImagesToS3 = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const files = req.files;
+    if (!files || files.length === 0) {
+        throw new FancyError_1.default("No files were uploaded", 400);
+    }
+    try {
+        const uploadPromises = files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
+            const filename = yield (0, S3Storage_1.uploadFileToS3)(file);
+            const fileUrl = yield (0, S3Storage_1.getFileUrlFromS3)(filename);
+            return {
+                filename,
+                url: fileUrl,
+            };
+        }));
+        const uploadedFiles = yield Promise.all(uploadPromises);
+        res.status(200).json({
+            success: true,
+            message: "Files uploaded successfully",
+            data: uploadedFiles,
+        });
+    }
+    catch (error) {
+        console.log(error);
+        throw new FancyError_1.default("Unable to Fetch the Users, Try again", 400);
+    }
+}));
+exports.deleteFromS3 = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const filename = req.params.key;
+    try {
+        const result = yield (0, S3Storage_1.deleteFileFromS3)(filename);
+        res.status(200).json({
+            success: true,
+            message: "Files deleted successfully",
+            data: result,
+        });
+    }
+    catch (error) {
+        console.log(error);
         throw new FancyError_1.default("Unable to Fetch the Users, Try again", 400);
     }
 }));

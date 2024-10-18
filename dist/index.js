@@ -87,24 +87,29 @@ process.on("unhandledRejection", (err) => {
 chatNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     console.log(`user ${(_a = socket === null || socket === void 0 ? void 0 : socket.user) === null || _a === void 0 ? void 0 : _a.name} with UUID:- ${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id} is connected`);
-    socket.on('add_friend', (user) => {
-        (0, SocketController_1.addFriend)(socket, user);
+    socket.on('create_connection', (userIds, connType, ConnectionInfo, callback) => {
+        (0, SocketController_1.createConnection)(socket, userIds, connType, ConnectionInfo, callback);
     });
-    socket.on('get_frnds_on_reload', (user) => {
-        (0, SocketController_1.getFriends)(socket, chatNamespace, user);
+    socket.on('online_status', (data, callback) => {
+        (0, SocketController_1.onlineStatus)(data, callback);
     });
-    socket.on('online_status', (data) => {
-        (0, SocketController_1.onlineStatus)(chatNamespace, socket, data);
+    socket.on("send_message", (data, callback) => {
+        (0, SocketController_1.sendMessage)(chatNamespace, socket, data, callback);
     });
-    socket.on("send_message", (data) => {
-        (0, SocketController_1.sendMessage)(chatNamespace, socket, data);
+    socket.on("edit_message", (data, callback) => {
+        (0, SocketController_1.editMessage)(chatNamespace, socket, data, callback);
     });
-    socket.on("edit_message", (data) => {
-        (0, SocketController_1.editMessage)(chatNamespace, socket, data);
+    socket.on("delete_message", (data, callback) => {
+        (0, SocketController_1.deleteMessage)(chatNamespace, socket, data, callback);
     });
-    socket.on("get_all_messages", () => {
-        (0, SocketController_1.getAllMessages)(socket);
-    });
+    socket.on("get_all_messages", (input, callback) => __awaiter(void 0, void 0, void 0, function* () {
+        if (typeof callback === 'function') {
+            yield (0, SocketController_1.getAllMessages)(socket, callback);
+        }
+        else {
+            console.error("Callback is not a function");
+        }
+    }));
     socket.on("create_group", (group) => {
         (0, SocketController_1.createGroup)(chatNamespace, socket, group);
     });
@@ -115,19 +120,23 @@ chatNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, functi
 }));
 callsNamespace.on("connect", (socket) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(`calls namespace is connected with id: ${socket.id}`);
+    socket.on('join_room', (data, callback) => {
+        socket.join(data);
+        callback({ message: "room joined" });
+    });
     socket.on('ice-candidate-offer', (data) => {
-        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: socket.user.socket_id });
+        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: data.to });
     });
     socket.on('ice-candidate-answer', (data) => {
-        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: socket.user.socket_id });
+        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: data.to });
     });
     socket.on("call-offer", (data) => {
-        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user._id });
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: data.to });
     });
     socket.on("call-answer", (data) => {
-        socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
+        socket.to(data.to).emit("call-answer", { answer: data.answer, from: data.to });
     });
     socket.on("stop-call", (data) => {
-        socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
+        socket.to(data.to).emit("stop-call", { from: data.to66 });
     });
 }));

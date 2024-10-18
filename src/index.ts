@@ -24,13 +24,16 @@ import {
     authorizeUser, CustomSocket, flushAllData,
     sendMessage, createGroup, updateSeen, getFriends,
     addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage,
-    JoinUserToOwnRoom
+    JoinUserToOwnRoom,
+    createConnection,
+    deleteMessage
 } from "./controllers/SocketController";
 import { socketMiddleware } from "./config/ConnectSession"
 import { mkdirSync, existsSync } from 'fs';
 import path from 'path';
 
 import { instrument } from "@socket.io/admin-ui";
+import { ConnectionType } from "models/Connection";
 
 // Handle uncaught Exception
 process.on("uncaughtException", (err) => {
@@ -127,29 +130,38 @@ process.on("unhandledRejection", (err: Error) => {
 chatNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`user ${socket?.user?.name} with UUID:- ${socket?.user?.socket_id} is connected`);
 
-    socket.on('add_friend', (user: any) => {
-        addFriend(socket, user);
+    socket.on('create_connection', (userIds: string[], connType: ConnectionType, ConnectionInfo: any, callback: any) => {
+        createConnection(socket, userIds, connType, ConnectionInfo, callback);
     });
 
-    socket.on('get_frnds_on_reload', (user) => {
-        getFriends(socket, chatNamespace, user);
+    // socket.on('get_frnds_on_reload', (user) => {
+    //     getFriends(socket, chatNamespace, user);
+    // });
+
+    socket.on('online_status', (data: any, callback: any) => {
+        onlineStatus(data, callback);
     });
 
-    socket.on('online_status', (data: any) => {
-        onlineStatus(chatNamespace, socket, data);
+    socket.on("send_message", (data: any, callback: any) => {
+        sendMessage(chatNamespace, socket, data, callback);
     });
 
-    socket.on("send_message", (data: any) => {
-        sendMessage(chatNamespace, socket, data);
+    socket.on("edit_message", (data: any, callback) => {
+        editMessage(chatNamespace, socket, data, callback);
+    });
+    socket.on("delete_message", (data: any, callback) => {
+        deleteMessage(chatNamespace, socket, data, callback);
     });
 
-    socket.on("edit_message", (data: any) => {
-        editMessage(chatNamespace, socket, data);
+    socket.on("get_all_messages", async (input: any, callback: any) => {
+        if (typeof callback === 'function') {
+            await getAllMessages(socket, callback);
+        } else {
+            console.error("Callback is not a function");
+        }
     });
 
-    socket.on("get_all_messages", () => {
-        getAllMessages(socket);
-    });
+
 
     socket.on("create_group", (group: any) => {
         createGroup(chatNamespace, socket, group);
@@ -164,25 +176,29 @@ chatNamespace.on("connect", async (socket: CustomSocket) => {
 
 callsNamespace.on("connect", async (socket: CustomSocket) => {
     console.log(`calls namespace is connected with id: ${socket.id}`);
-
+    socket.on('join_room', (data, callback) => {
+        socket.join(data)
+        callback({ message: "room joined" })
+    })
     socket.on('ice-candidate-offer', (data) => {
-        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: socket.user.socket_id });
+        // socket.user.socket_id
+        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: data.to });
     });
 
     socket.on('ice-candidate-answer', (data) => {
-        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: socket.user.socket_id });
+        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: data.to });
     });
 
     socket.on("call-offer", (data) => {
-        socket.to(data.to).emit("call-offer", { offer: data.offer, from: socket.user._id });
+        socket.to(data.to).emit("call-offer", { offer: data.offer, from: data.to });
     });
 
     socket.on("call-answer", (data) => {
-        socket.to(data.to).emit("call-answer", { answer: data.answer, from: socket.user.socket_id });
+        socket.to(data.to).emit("call-answer", { answer: data.answer, from: data.to });
     });
 
     socket.on("stop-call", (data) => {
-        socket.to(data.to).emit("stop-call", { from: socket.user.socket_id });
+        socket.to(data.to).emit("stop-call", { from: data.to66 });
     });
 });
 

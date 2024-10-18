@@ -16,6 +16,7 @@ const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 // const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 import { getSession, setSession, removeSession } from "../utils/session"
 import { MemoryStore, SessionData, Session } from "express-session";
+import { deleteFileFromS3, getFileUrlFromS3, uploadFileToS3 } from "../utils/S3Storage";
 //joi validation
 declare module 'express-serve-static-core' {
   interface Request {
@@ -168,6 +169,53 @@ export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
     const users = await User.find({ _id: { $ne: loggedInUserId } });
     res.status(200).json(users);
   } catch (error: any) {
+    throw new FancyError("Unable to Fetch the Users, Try again", 400)
+  }
+})
+
+
+export const uploadImagesToS3 = asyncHandler(async (req: Request, res: Response) => {
+  const files = req.files as Express.Multer.File[];
+  if (!files || files.length === 0) {
+    throw new FancyError("No files were uploaded", 400);
+  }
+  try {
+    const uploadPromises = files.map(async (file) => {
+      const filename = await uploadFileToS3(file); // Upload each file
+      const fileUrl = await getFileUrlFromS3(filename); // Get the public URL for the uploaded file
+      return {
+        filename,
+        url: fileUrl,
+      };
+    });
+
+    const uploadedFiles = await Promise.all(uploadPromises)
+    res.status(200).json({
+      success: true,
+      message: "Files uploaded successfully",
+      data: uploadedFiles,
+    });
+  } catch (error: any) {
+    console.log(error);
+
+    throw new FancyError("Unable to Fetch the Users, Try again", 400)
+  }
+})
+
+export const deleteFromS3 = asyncHandler(async (req: Request, res: Response) => {
+  const filename = req.params.key
+
+  try {
+    const result = await deleteFileFromS3(filename)
+
+    res.status(200).json({
+      success: true,
+      message: "Files deleted successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    console.log(error);
+
     throw new FancyError("Unable to Fetch the Users, Try again", 400)
   }
 })

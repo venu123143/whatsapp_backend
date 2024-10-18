@@ -15,7 +15,7 @@ export interface IChatMessage extends Document {
 enum ConnectionType {
     Group = "group",
     OneToOne = "onetoone"
-}
+}   
 // Define enum for message types
 enum MessageType {
     Text = "text",

@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const UserController_1 = require("../controllers/UserController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const uploadImages_1 = require("../middleware/uploadImages");
+const Multer_1 = require("../middleware/Multer");
 const router = express_1.default.Router();
 router.post('/sendotp', UserController_1.SendOtpViaSms);
 router.post('/verifyotp', UserController_1.verifyOtp);
@@ -14,4 +15,6 @@ router.put('/updateuser/:id', authMiddleware_1.authMiddleware, UserController_1.
 router.put('/updateprofile/:id', authMiddleware_1.authMiddleware, uploadImages_1.uploadPhoto.array('images', 1), UserController_1.updateProfile);
 router.get('/', authMiddleware_1.authMiddleware, UserController_1.getAllUsers);
 router.get('/logout', UserController_1.logoutUser);
+router.post('/images', Multer_1.chatUpload.array('image', 5), UserController_1.uploadImagesToS3);
+router.delete('/img/:key', UserController_1.deleteFromS3);
 exports.default = router;
