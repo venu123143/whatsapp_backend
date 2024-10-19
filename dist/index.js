@@ -174,4 +174,5 @@ class App {
         (0, admin_ui_1.instrument)(this.io, { auth: false });
     }
 }
-new App();
+const app = new App();
+exports.default = app;
