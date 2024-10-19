@@ -1,19 +1,15 @@
-
-// let ip = process.env.IP as any
-// const newServer = server.listen(port, ip, () => {
-//     console.log(`server is running on port http://${ip}:${port}`);
-// });
-import fs from "fs"
 import { createClient } from "redis";
-import { Server } from "socket.io";
+import { Server, Namespace } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import express, { Application } from "express";
-import http from "http";
-import "dotenv/config";
-import session from "./utils/session";
 import cookieParser from "cookie-parser";
+import express, { Application } from "express";
 import cors, { CorsOptions } from "cors";
 import morgan from "morgan";
+import http from "http";
+import fs from "fs";
+
+import "dotenv/config";
+import session from "./utils/session";
 import "./config/db";
 import ErrorHandler from "./middleware/Errors";
 import UserRouter from "./routes/UserRoute";
@@ -28,169 +24,177 @@ import {
     createConnection,
     deleteMessage
 } from "./controllers/SocketController";
-import { socketMiddleware } from "./config/ConnectSession"
-
+import { socketMiddleware } from "./config/ConnectSession";
 import { instrument } from "@socket.io/admin-ui";
 import { ConnectionType } from "models/Connection";
+import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
-// Handle uncaught Exception
-process.on("uncaughtException", (err) => {
-    console.error("Uncaught Exception:", err);
-    console.log(`shutting down the server for handling uncaught Exception`);
-    process.exit(1);
-});
+class App {
+    public app: Application;
+    public server: http.Server;
+    public io: Server;
+    public port: string | number;
+    public chatNamespace: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
+    public callsNamespace: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
+    private redisConnected: boolean = false;
+    private pubClient: ReturnType<typeof createClient> | undefined;
+    private subClient: ReturnType<typeof createClient> | undefined;
 
-const app: Application = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
-        credentials: true,
+    constructor() {
+        this.app = express();
+        this.server = http.createServer(this.app);
+        this.port = process.env.PORT || 5000;
+        this.io = new Server(this.server, {
+            cors: {
+                origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
+                credentials: true,
+            }
+        });
+        this.chatNamespace = this.io.of("/chat");
+        this.callsNamespace = this.io.of("/calls");
+        this.initializeMiddlewares();
+        this.initializeRoutes();
+        this.handleError();
+        this.initializeSockets();
+        this.listen();
     }
-});
-const callsNamespace = io.of("/calls");
-const chatNamespace = io.of("/chat");
 
-// CORS, JSON, and cookie-parser
-const options: CorsOptions = {
-    origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://whatsapp-chat-imbu.onrender.com'],
-    credentials: true,
-    exposedHeaders: ["sessionID", "sessionId", "sessionid"]
-};
-app.use(cors(options));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(morgan('dev'));
-app.use(session);
-chatNamespace.use(socketMiddleware);
-chatNamespace.use(authorizeUser);
-callsNamespace.use(socketMiddleware);
-callsNamespace.use(JoinUserToOwnRoom);
+    private initializeMiddlewares() {
+        const corsOptions: CorsOptions = {
+            origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://whatsapp-chat-imbu.onrender.com'],
+            credentials: true,
+            exposedHeaders: ["sessionID", "sessionId", "sessionid"]
+        };
+        this.app.use(cors(corsOptions));
+        this.app.use(express.json());
+        this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(cookieParser());
+        this.app.use(morgan('dev'));
+        this.app.use(session);
+        this.chatNamespace.use(socketMiddleware);
+        this.chatNamespace.use(authorizeUser);
+        this.callsNamespace.use(socketMiddleware);
+        this.callsNamespace.use(JoinUserToOwnRoom);
+    }
 
-app.get('/', (req, res) => {
-    res.send('backend home route successful');
-});
+    private initializeRoutes() {
+        this.app.get('/', (req, res) => {
+            res.send('Backend home route successful');
+        });
+        this.app.use("/api/users", UserRouter);
+        this.app.use("/api/msg", MsgRouter);
+        this.app.use('/api/groups', groupRoutes);
+        this.app.use('/api/calls', CallsRouter);
+    }
 
-app.use("/api/users", UserRouter);
-app.use("/api/msg", MsgRouter);
-app.use('/api/groups', groupRoutes);
-app.use('/api/calls', CallsRouter);
+    private handleError() {
+        this.app.use(ErrorHandler);
+        process.on("uncaughtException", (err) => {
+            console.error("Uncaught Exception:", err);
+            process.exit(1);
+        });
+        process.on("unhandledRejection", (err: Error) => {
+            console.error("Unhandled Rejection:", err);
+            this.server.close(() => process.exit(1));
+        });
+    }
 
-app.use(ErrorHandler);
-
-const port = process.env.PORT || 5000;
-const newServer = server.listen(port, () => {
-    console.log(`Server is running on port number ${port}`);
-});
-
-instrument(io, { auth: false });
-
-// Unhandled promise rejection
-process.on("unhandledRejection", (err: Error) => {
-    console.error("Unhandled Rejection:", err);
-    newServer.close(() => {
-        process.exit(1);
-    });
-});
-
-// // Redis client and adapter
-// const pubClient = createClient({ url: process.env.REDIS_ADAPTOR });
-// const subClient = pubClient.duplicate();
-
-// let redisConnected = false;
-
-// async function connectRedis() {
-//     if (redisConnected) return;
-//     try {
-//         await pubClient.connect();
-//         await subClient.connect();
-//         redisConnected = true;
-//         console.log("Redis adapter connected");
-
-//         io.adapter(createAdapter(pubClient, subClient));
-//         const info = await pubClient.info('memory');
-//         const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
-//         console.log(`Redis memory usage: ${usedMemory} bytes`);
-//     } catch (err) {
-//         console.error("Redis adapter error:", err);
-//     }
-// }
-
-// connectRedis();
-
-chatNamespace.on("connect", async (socket: CustomSocket) => {
-    console.log(`user ${socket?.user?.name} with UUID:- ${socket?.user?.socket_id} is connected`);
-
-    socket.on('create_connection', (userIds: string[], connType: ConnectionType, ConnectionInfo: any, callback: any) => {
-        createConnection(socket, userIds, connType, ConnectionInfo, callback);
-    });
-
-    // socket.on('get_frnds_on_reload', (user) => {
-    //     getFriends(socket, chatNamespace, user);
-    // });
-
-    socket.on('online_status', (data: any, callback: any) => {
-        onlineStatus(data, callback);
-    });
-
-    socket.on("send_message", (data: any, callback: any) => {
-        sendMessage(chatNamespace, socket, data, callback);
-    });
-
-    socket.on("edit_message", (data: any, callback) => {
-        editMessage(chatNamespace, socket, data, callback);
-    });
-    socket.on("delete_message", (data: any, callback) => {
-        deleteMessage(chatNamespace, socket, data, callback);
-    });
-
-    socket.on("get_all_messages", async (input: any, callback: any) => {
-        if (typeof callback === 'function') {
-            await getAllMessages(socket, callback);
-        } else {
-            console.error("Callback is not a function");
+    private async connectRedis() {
+        if (this.redisConnected) return;
+        try {
+            this.pubClient = createClient({ url: process.env.REDIS_ADAPTOR });
+            this.subClient = this.pubClient.duplicate();
+            await this.pubClient.connect();
+            await this.subClient.connect();
+            this.redisConnected = true;
+            this.io.adapter(createAdapter(this.pubClient, this.subClient));
+            const info = await this.pubClient.info('memory');
+            const usedMemory = parseInt(info.split('\r\n').find(line => line.startsWith('used_memory:'))?.split(':')[1] || '0');
+            console.log(`Redis memory usage: ${usedMemory} bytes`);
+        } catch (err) {
+            console.error("Redis adapter error:", err);
         }
-    });
+    }
 
+    private initializeSockets() {
+        this.chatNamespace.on("connect", async (socket: CustomSocket) => {
+            console.log(`User ${socket?.user?.name} with UUID ${socket?.user?.socket_id} connected`);
 
+            socket.on('create_connection', (userIds: string[], connType: ConnectionType, ConnectionInfo: any, callback: any) => {
+                createConnection(socket, userIds, connType, ConnectionInfo, callback);
+            });
 
-    socket.on("create_group", (group: any) => {
-        createGroup(chatNamespace, socket, group);
-    });
+            socket.on('online_status', (data: any, callback: any) => {
+                onlineStatus(data, callback);
+            });
 
-    socket.on("update_seen", (msg) => {
-        updateSeen(socket, msg);
-    });
+            socket.on("send_message", (data: any, callback: any) => {
+                sendMessage(this.chatNamespace, socket, data, callback);
+            });
 
-    socket.on("disconnecting", () => onDisconnect(socket));
-});
+            socket.on("edit_message", (data: any, callback: any) => {
+                editMessage(this.chatNamespace, socket, data, callback);
+            });
 
-callsNamespace.on("connect", async (socket: CustomSocket) => {
-    console.log(`calls namespace is connected with id: ${socket.id}`);
-    socket.on('join_room', (data, callback) => {
-        socket.join(data)
-        callback({ message: "room joined" })
-    })
-    socket.on('ice-candidate-offer', (data) => {
-        // socket.user.socket_id
-        socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: data.to });
-    });
+            socket.on("delete_message", (data: any, callback: any) => {
+                deleteMessage(this.chatNamespace, socket, data, callback);
+            });
 
-    socket.on('ice-candidate-answer', (data) => {
-        socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: data.to });
-    });
+            socket.on("get_all_messages", async (input: any, callback: any) => {
+                if (typeof callback === 'function') {
+                    await getAllMessages(socket, callback);
+                } else {
+                    console.error("Callback is not a function");
+                }
+            });
 
-    socket.on("call-offer", (data) => {
-        socket.to(data.to).emit("call-offer", { offer: data.offer, from: data.to });
-    });
+            socket.on("create_group", (group: any) => {
+                createGroup(this.chatNamespace, socket, group);
+            });
 
-    socket.on("call-answer", (data) => {
-        socket.to(data.to).emit("call-answer", { answer: data.answer, from: data.to });
-    });
+            socket.on("update_seen", (msg) => {
+                updateSeen(socket, msg);
+            });
 
-    socket.on("stop-call", (data) => {
-        socket.to(data.to).emit("stop-call", { from: data.to66 });
-    });
-});
+            socket.on("disconnecting", () => onDisconnect(socket));
+        });
 
+        this.callsNamespace.on("connect", async (socket: CustomSocket) => {
+            console.log(`Calls namespace connected with id: ${socket.id}`);
+
+            socket.on('join_room', (data, callback) => {
+                socket.join(data);
+                callback({ message: "Room joined" });
+            });
+
+            socket.on('ice-candidate-offer', (data) => {
+                socket.to(data.to).emit("ice-candidate-offer", { candidate: data.candidate, from: data.to });
+            });
+
+            socket.on('ice-candidate-answer', (data) => {
+                socket.to(data.to).emit("ice-candidate-answer", { candidate: data.candidate, from: data.to });
+            });
+
+            socket.on("call-offer", (data) => {
+                socket.to(data.to).emit("call-offer", { offer: data.offer, from: data.to });
+            });
+
+            socket.on("call-answer", (data) => {
+                socket.to(data.to).emit("call-answer", { answer: data.answer, from: data.to });
+            });
+
+            socket.on("stop-call", (data) => {
+                socket.to(data.to).emit("stop-call", { from: data.to });
+            });
+        });
+    }
+
+    public listen() {
+        this.server.listen(this.port, () => {
+            console.log(`Server is running on port number ${this.port}`);
+        });
+        instrument(this.io, { auth: false });
+    }
+}
+
+new App();

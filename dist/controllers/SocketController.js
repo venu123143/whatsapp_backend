@@ -216,12 +216,10 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
 });
 exports.getAllMessages = getAllMessages;
 const authorizeUser = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c;
     if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     }
     else {
-        yield session_1.redisClient.hSet(`userId${(_b = socket === null || socket === void 0 ? void 0 : socket.user) === null || _b === void 0 ? void 0 : _b.socket_id}`, { "userId": (_c = socket === null || socket === void 0 ? void 0 : socket.user) === null || _c === void 0 ? void 0 : _c.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
@@ -414,17 +412,17 @@ const deleteMessage = (io, socket, data, callback) => __awaiter(void 0, void 0, 
 });
 exports.deleteMessage = deleteMessage;
 const onlineStatus = (data, callback) => __awaiter(void 0, void 0, void 0, function* () {
-    const userStatus = yield session_1.redisClient.hGet(`userId${data.user_id._id}`, 'connected');
+    const userStatus = yield session_1.redisClient.hGet(`userId${data.user_id}`, 'connected');
     if (data.user_id) {
-        yield ChatModel_1.default.updateMany({ "sender.id": data.user_id._id, room_id: new mongoose_1.Types.ObjectId(data.room_id) }, { seen: true });
+        yield ChatModel_1.default.updateMany({ "sender.id": data.user_id, room_id: new mongoose_1.Types.ObjectId(data.room_id) }, { seen: true });
     }
     callback(Object.assign(Object.assign({}, data), { online_status: userStatus === 'true' ? true : false }));
 });
 exports.onlineStatus = onlineStatus;
 const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
+    var _b;
     console.log("disconnecting.", socket.user.name);
-    yield session_1.redisClient.hSet(`userId${(_d = socket.user) === null || _d === void 0 ? void 0 : _d._id}`, 'connected', 'false');
+    yield session_1.redisClient.hSet(`userId${(_b = socket.user) === null || _b === void 0 ? void 0 : _b._id}`, 'connected', 'false');
     socket.user = null;
     socket.disconnect(true);
 });

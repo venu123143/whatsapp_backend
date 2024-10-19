@@ -215,7 +215,7 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
     if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     } else {
-        await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
+        // await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
@@ -451,10 +451,11 @@ export const deleteMessage = async (io: ChatNamespace, socket: CustomSocket, dat
     }
 }
 export const onlineStatus = async (data: any, callback: any) => {
-    const userStatus = await redisClient.hGet(`userId${data.user_id._id}`, 'connected')
+    const userStatus = await redisClient.hGet(`userId${data.user_id}`, 'connected')
+
     if (data.user_id) {
         await ChatModel.updateMany(
-            { "sender.id": data.user_id._id, room_id: new Types.ObjectId(data.room_id) },
+            { "sender.id": data.user_id, room_id: new Types.ObjectId(data.room_id) },
             { seen: true },
         );
     }
