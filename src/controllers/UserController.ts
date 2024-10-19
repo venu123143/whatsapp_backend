@@ -42,20 +42,32 @@ const sendTextMessage = async (mobile: string, otp: string) => {
   }
 };
 export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) => {
-  const mobile = req.body?.mobile;
-  await signUpSchema.validateAsync(req.body)
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpCreatedAt = moment().unix()
-  req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp }
-  res.setHeader('sessionId', req.sessionID);
+  try {
+    const mobile = req.body?.mobile;
 
+    // Validate the request body
+    await signUpSchema.validateAsync(req.body);
 
-  // const msg = sendTextMessage(mobile, otp)
-  res.status(200).json({
-    success: true, message: `Verification code ${otp} sent to ${mobile}, Valid for next 10 mins. `,
-  });
+    // Generate the OTP and timestamp
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpCreatedAt = moment().unix();
+    req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp };
 
+    // Send the SMS (await if it's an async operation)
+    // await sendTextMessage(mobile, otp);
+
+    // Set the session ID in the response headers
+    res.setHeader('sessionId', req.sessionID);
+    res.status(200).json({
+      success: true,
+      message: `Verification code ${otp} sent to ${mobile}. Valid for the next 10 mins.`,
+    });
+  } catch (error: any) {
+    // Catch any errors and send a 500 error response
+    res.status(500).json({ success: false, message: error.message });
+  }
 })
+
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const curOTP = req.body?.otp;
   await loginSchema.validateAsync(req.body)

@@ -42,15 +42,21 @@ const sendTextMessage = (mobile, otp) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const mobile = (_a = req.body) === null || _a === void 0 ? void 0 : _a.mobile;
-    yield JoiSchemas_1.signUpSchema.validateAsync(req.body);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpCreatedAt = (0, moment_1.default)().unix();
-    req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp };
-    res.setHeader('sessionId', req.sessionID);
-    res.status(200).json({
-        success: true, message: `Verification code ${otp} sent to ${mobile}, Valid for next 10 mins. `,
-    });
+    try {
+        const mobile = (_a = req.body) === null || _a === void 0 ? void 0 : _a.mobile;
+        yield JoiSchemas_1.signUpSchema.validateAsync(req.body);
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpCreatedAt = (0, moment_1.default)().unix();
+        req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile, otp: otp };
+        res.setHeader('sessionId', req.sessionID);
+        res.status(200).json({
+            success: true,
+            message: `Verification code ${otp} sent to ${mobile}. Valid for the next 10 mins.`,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 }));
 exports.verifyOtp = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c;
