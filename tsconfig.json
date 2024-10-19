@@ -6,12 +6,18 @@
     "outDir": "./dist",
     "removeComments": true,
     "moduleResolution": "Node",
-    "typeRoots": ["node_modules/@types", "src/types"],
+    "typeRoots": [
+      "node_modules/@types",
+      "src/types"
+    ],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": true
   },
-  "include": ["src/**/*"],
-
+  "include": [
+    "src/**/*"
+  ],
 }
