@@ -17,9 +17,9 @@ import MsgRouter from "./routes/MessageRoute";
 import groupRoutes from "./routes/GroupRoute";
 import CallsRouter from "./routes/CallsRoute";
 import {
-    authorizeUser, CustomSocket, flushAllData,
-    sendMessage, createGroup, updateSeen, getFriends,
-    addFriend, onDisconnect, onlineStatus, getAllMessages, editMessage,
+    authorizeUser, CustomSocket,
+    sendMessage, createGroup, updateSeen,
+    onDisconnect, onlineStatus, getAllMessages, editMessage,
     JoinUserToOwnRoom,
     createConnection,
     deleteMessage
