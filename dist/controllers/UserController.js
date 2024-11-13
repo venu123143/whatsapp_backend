@@ -13,7 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteFromS3 = exports.uploadImagesToS3 = exports.getAllUsers = exports.updateProfile = exports.UpdateUser = exports.logoutUser = exports.verifyOtp = exports.SendOtpViaSms = void 0;
-const twilio_1 = __importDefault(require("twilio"));
 const ua_parser_js_1 = __importDefault(require("ua-parser-js"));
 const UserModel_1 = __importDefault(require("../models/UserModel"));
 const uuid_1 = require("uuid");
@@ -24,22 +23,8 @@ const express_async_handler_1 = __importDefault(require("express-async-handler")
 const Cloudinary_1 = require("../utils/Cloudinary");
 const fs_1 = __importDefault(require("fs"));
 const moment_1 = __importDefault(require("moment"));
-const client = (0, twilio_1.default)(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 const session_1 = require("../utils/session");
 const S3Storage_1 = require("../utils/S3Storage");
-const sendTextMessage = (mobile, otp) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const msg = yield client.messages.create({
-            body: `Your Otp is ${otp} , valid for next 10-min.`,
-            to: `+91${mobile}`,
-            from: "+16562188441",
-        });
-        return msg;
-    }
-    catch (error) {
-        return error;
-    }
-});
 exports.SendOtpViaSms = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {

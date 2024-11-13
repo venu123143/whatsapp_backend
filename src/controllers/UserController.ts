@@ -1,18 +1,15 @@
-import { CookieOptions, Request, Response } from "express";
-import Twilio from "twilio";
+import { Request, Response } from "express";
 import UAParser from "ua-parser-js"
-import User, { IUser } from "../models/UserModel";
+import User from "../models/UserModel";
 import { v4 as uuidv4 } from 'uuid';
 import FancyError from "../utils/FancyError";
 import { signUpSchema, loginSchema } from "../middleware/JoiSchemas"
 import jwtToken from "../utils/jwtToken";
 import asyncHandler from "express-async-handler"
-import { uploadImage, deleteImage } from "../utils/Cloudinary";
+import { uploadImage } from "../utils/Cloudinary";
 import fs from "fs"
 import moment from "moment"
-import os from "os"
 
-const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 // const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
 import { getSession, setSession, removeSession } from "../utils/session"
 import { MemoryStore, SessionData, Session } from "express-session";
@@ -29,18 +26,18 @@ declare module 'express-serve-static-core' {
   }
 
 }
-const sendTextMessage = async (mobile: string, otp: string) => {
-  try {
-    const msg = await client.messages.create({
-      body: `Your Otp is ${otp} , valid for next 10-min.`,
-      to: `+91${mobile}`,
-      from: "+16562188441", // From a valid Twilio number
-    });
-    return msg;
-  } catch (error) {
-    return error;
-  }
-};
+// const sendTextMessage = async (mobile: string, otp: string) => {
+//   try {
+//     const msg = await client.messages.create({
+//       body: `Your Otp is ${otp} , valid for next 10-min.`,
+//       to: `+91${mobile}`,
+//       from: "+16562188441", // From a valid Twilio number
+//     });
+//     return msg;
+//   } catch (error) {
+//     return error;
+//   }
+// };
 export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) => {
   try {
     const mobile = req.body?.mobile;
