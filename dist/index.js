@@ -53,7 +53,7 @@ class App {
     }
     initializeMiddlewares() {
         const corsOptions = {
-            origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://whatsapp-chat-imbu.onrender.com'],
+            origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://vchat.nerchuko.in', 'https://whatsapp-chat-imbu.onrender.com'],
             credentials: true,
             exposedHeaders: ["sessionID", "sessionId", "sessionid"]
         };
