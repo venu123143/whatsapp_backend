@@ -46,7 +46,7 @@ class App {
         this.port = process.env.PORT || 5000;
         this.io = new Server(this.server, {
             cors: {
-                origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
+                origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://vchat.nerchuko.in', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
                 credentials: true,
             }
         });
