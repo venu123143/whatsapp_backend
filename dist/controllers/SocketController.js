@@ -123,7 +123,7 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
                                         cond: {
                                             $and: [
                                                 { $eq: ["$$this.seen", false] },
-                                                { $ne: ["$$this.sender.id", currentUser._id] }
+                                                { $ne: ["$$this.sender.id", currentUser._id.toString()] }
                                             ]
                                         }
                                     }
@@ -266,6 +266,7 @@ const addFriend = (socket, user) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.addFriend = addFriend;
 const createConnection = (socket, userIds, connType, ConnectionInfo, callback) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b;
     try {
         let newConnection;
         switch (connType) {
@@ -273,6 +274,14 @@ const createConnection = (socket, userIds, connType, ConnectionInfo, callback) =
                 const friend = yield UserModel_1.default.findOne({ _id: userIds[0] });
                 if (!friend) {
                     callback({ error: `No user exists ` });
+                    return;
+                }
+                const existingConnection = yield Connection_1.default.findOne({
+                    conn_type: "onetoone",
+                    users: { $all: [userIds[0], (_b = socket.user._id) === null || _b === void 0 ? void 0 : _b.toString()] }
+                });
+                if (existingConnection) {
+                    callback({ error: "Connection already exists" });
                     return;
                 }
                 newConnection = new Connection_1.default({
@@ -283,6 +292,7 @@ const createConnection = (socket, userIds, connType, ConnectionInfo, callback) =
                     createdBy: socket.user._id
                 });
                 yield newConnection.save();
+                callback({ success: "Connection created success" });
                 break;
             case "group":
                 newConnection = new Connection_1.default({
@@ -420,9 +430,9 @@ const onlineStatus = (data, callback) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.onlineStatus = onlineStatus;
 const onDisconnect = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _c;
     console.log("disconnecting.", socket.user.name);
-    yield session_1.redisClient.hSet(`userId${(_b = socket.user) === null || _b === void 0 ? void 0 : _b._id}`, 'connected', 'false');
+    yield session_1.redisClient.hSet(`userId${(_c = socket.user) === null || _c === void 0 ? void 0 : _c._id}`, 'connected', 'false');
     socket.user = null;
     socket.disconnect(true);
 });

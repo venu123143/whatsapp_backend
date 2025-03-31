@@ -118,7 +118,7 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                                             cond: {
                                                 $and: [
                                                     { $eq: ["$$this.seen", false] },
-                                                    { $ne: ["$$this.sender.id", currentUser._id] }
+                                                    { $ne: ["$$this.sender.id", currentUser._id.toString()] }
                                                 ]
                                             }
                                         }
@@ -282,6 +282,15 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                     callback({ error: `No user exists ` })
                     return
                 }
+                const existingConnection = await Connection.findOne({
+                    conn_type: "onetoone",
+                    users: { $all: [userIds[0], socket.user._id?.toString()] } // Check both users exist in the same connection
+                });
+
+                if (existingConnection) {
+                    callback({ error: "Connection already exists" });
+                    return;
+                }
                 newConnection = new Connection({
                     room_id: new Types.ObjectId().toString(),
                     conn_type: 'onetoone',
@@ -290,6 +299,7 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                     createdBy: socket.user._id
                 });
                 await newConnection.save();
+                callback({ success: "Connection created success" });
                 break;
             case "group":
                 newConnection = new Connection({
@@ -304,7 +314,6 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                 });
                 await newConnection.save();
                 callback({ success: `${connType} created successfully` })
-
                 break;
             default:
                 break;
