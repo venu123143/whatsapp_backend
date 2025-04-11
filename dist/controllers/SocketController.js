@@ -84,7 +84,11 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
             {
                 $addFields: {
                     lastMessage: {
-                        $arrayElemAt: ["$messages", -1]
+                        $cond: {
+                            if: { $gt: [{ $size: "$messages" }, 0] },
+                            then: { $arrayElemAt: ["$messages", -1] },
+                            else: null
+                        }
                     }
                 }
             },
@@ -135,11 +139,24 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
                 }
             },
             {
+                $addFields: {
+                    sortField: {
+                        $cond: {
+                            if: { $ne: ["$lastMessage", null] },
+                            then: "$lastMessage.date",
+                            else: "$createdAt"
+                        }
+                    }
+                }
+            },
+            {
                 $project: {
                     room_id: 1,
                     conn_type: 1,
                     messages: 1,
                     lastMessage: 1,
+                    createdAt: 1,
+                    sortField: 1,
                     display_name: {
                         $cond: {
                             if: { $eq: ["$conn_type", "onetoone"] },
@@ -191,7 +208,7 @@ const getAllMessages = (socket, callback) => __awaiter(void 0, void 0, void 0, f
                 }
             },
             {
-                $sort: { "lastMessage.date": -1 }
+                $sort: { sortField: -1 }
             },
             {
                 $limit: 100

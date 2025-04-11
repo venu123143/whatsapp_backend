@@ -73,11 +73,15 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         as: "messages"
                     }
                 },
-                // Add lastMessage field from messages array
+                // Add lastMessage field from messages array - ensuring it's always present
                 {
                     $addFields: {
                         lastMessage: {
-                            $arrayElemAt: ["$messages", -1]  // Get the last (most recent) message
+                            $cond: {
+                                if: { $gt: [{ $size: "$messages" }, 0] },
+                                then: { $arrayElemAt: ["$messages", -1] },
+                                else: null
+                            }
                         }
                     }
                 },
@@ -129,6 +133,18 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         }
                     }
                 },
+                // Add a sorting field based on lastMessage.date or createdAt
+                {
+                    $addFields: {
+                        sortField: {
+                            $cond: {
+                                if: { $ne: ["$lastMessage", null] },
+                                then: "$lastMessage.date",
+                                else: "$createdAt"
+                            }
+                        }
+                    }
+                },
                 // Project fields with conditional display name, profile, and users
                 {
                     $project: {
@@ -136,6 +152,8 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         conn_type: 1,
                         messages: 1,
                         lastMessage: 1,
+                        createdAt: 1,
+                        sortField: 1,
                         display_name: {
                             $cond: {
                                 if: { $eq: ["$conn_type", "onetoone"] },
@@ -186,9 +204,9 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         unreadCount: 1
                     }
                 },
-                // Sort by last message date
+                // Sort by sortField (either lastMessage.date or createdAt)
                 {
-                    $sort: { "lastMessage.date": -1 }
+                    $sort: { sortField: -1 }
                 },
                 {
                     $limit: 100
