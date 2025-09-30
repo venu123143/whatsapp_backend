@@ -2,3 +2,5 @@
 .env
 # dependencies
 /node_modules
+dist
+dist/
