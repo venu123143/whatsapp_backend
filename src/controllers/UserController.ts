@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import UAParser from "ua-parser-js"
+import { UAParser } from "ua-parser-js"
 import User from "../models/UserModel";
 import { v4 as uuidv4 } from 'uuid';
 import FancyError from "../utils/FancyError";
@@ -215,7 +215,7 @@ export const uploadImagesToS3 = asyncHandler(async (req: Request, res: Response)
 })
 
 export const deleteFromS3 = asyncHandler(async (req: Request, res: Response) => {
-  const filename = req.params.key
+  const filename = req.params.key as string
 
   try {
     const result = await deleteFileFromS3(filename)

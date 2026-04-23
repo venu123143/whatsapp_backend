@@ -1,16 +1,17 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 export interface IGroup extends Document {
   name: string;
   socket_id: string;
   status: string;
   description: string;
   unreadCount: number;
-  users: Schema.Types.ObjectId[];
-  admins: Schema.Types.ObjectId[];
+  users: Types.ObjectId[];
+  admins: Types.ObjectId[];
   maxUsers: number;
   profile: string;
-  createdBy: Schema.Types.ObjectId;
-  chat: string[];
+  createdBy: Types.ObjectId;
+  lastMessage?: Types.ObjectId;
+  chat: Types.ObjectId[];
 }
 
 const groupSchema: Schema = new mongoose.Schema(

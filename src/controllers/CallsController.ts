@@ -17,7 +17,7 @@ export const createCall = asyncHandler(async (req: Request, res: Response) => {
         }
         await createCallSchema.validateAsync(req.body);
         const { title, callType, pin } = req.body
-        const create = await Calls.create({ title, callType, pin, status: 'live', createdBy: user.id, socketId: uuidv4() })
+        const create = await Calls.create({ title, callType, pin, status: 'live', createdBy: user._id, socketId: uuidv4() })
         res.status(200).json({ message: 'your call has started ', data: create })
     } catch (error: any) {
         const errorMessage = error?.details ? error.details[0].message.replace(/["\\]/g, '') : error.message;
@@ -32,7 +32,7 @@ export const getCalls = asyncHandler(async (req: Request, res: Response) => {
         if (!user) {
             throw new FancyError("user not found, login again.", 403)
         }
-        const userId = req.user?.id
+        const userId = req.user?._id
         const { page = 1, limit = 10 } = req.query; // Default page and limit
         const pageNumber = parseInt(page as string, 10); // Convert to number
         const limitNumber = parseInt(limit as string, 10); // Convert to number
@@ -73,7 +73,7 @@ export const getLiveCalls = asyncHandler(async (req: Request, res: Response) => 
         const limitNumber = parseInt(limit as string, 10); // Convert limit to number
 
         const calls = await Calls.find({
-            status: status
+            status: status as string
         }).skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber)
             .populate({

@@ -6,7 +6,6 @@ import express, { Application } from "express";
 import cors, { CorsOptions } from "cors";
 import morgan from "morgan";
 import http from "http";
-import fs from "fs";
 
 import "dotenv/config";
 import session from "./utils/session";
