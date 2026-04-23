@@ -64,6 +64,7 @@ class App {
             credentials: true,
             exposedHeaders: ["sessionID", "sessionId", "sessionid"]
         };
+        this.app.use(cors(corsOptions));
         this.app.options(/.*/, cors(corsOptions));
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
