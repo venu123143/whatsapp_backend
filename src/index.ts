@@ -23,7 +23,10 @@ import {
     createConnection,
     deleteMessage
 } from "./controllers/SocketController";
-import { socketMiddleware } from "./config/ConnectSession";
+import { socketMiddleware } from "./config/ConnectSession"
+import { mkdirSync, existsSync } from 'fs';
+import path from 'path';
+
 import { instrument } from "@socket.io/admin-ui";
 import { ConnectionType } from "models/Connection";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
@@ -57,25 +60,32 @@ class App {
         this.initializeSockets();
         this.listen();
     }
+});
 
-    private initializeMiddlewares() {
-        const corsOptions: CorsOptions = {
-            origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://vchat.nerchuko.in', 'https://whatsapp-chat-imbu.onrender.com'],
-            credentials: true,
-            exposedHeaders: ["sessionID", "sessionId", "sessionid"]
-        };
-        this.app.use(cors(corsOptions));
-        this.app.options(/.*/, cors(corsOptions));
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true }));
-        this.app.use(cookieParser());
-        this.app.use(morgan('dev'));
-        this.app.use(session);
-        this.chatNamespace.use(socketMiddleware);
-        this.chatNamespace.use(authorizeUser);
-        this.callsNamespace.use(socketMiddleware);
-        this.callsNamespace.use(JoinUserToOwnRoom);
-    }
+const uploadDirectory = path.join(__dirname, '../src/public/images');
+
+if (!existsSync(uploadDirectory)) {
+    mkdirSync(uploadDirectory, { recursive: true });
+}
+const callsNamespace = io.of("/calls");
+const chatNamespace = io.of("/chat");
+
+// CORS, JSON, and cookie-parser
+const options: CorsOptions = {
+    origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com/', 'https://whatsapp-chat-imbu.onrender.com'],
+    credentials: true,
+    exposedHeaders: ["sessionID", "sessionId", "sessionid"]
+};
+app.use(cors(options));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(morgan('dev'));
+app.use(session);
+chatNamespace.use(socketMiddleware);
+chatNamespace.use(authorizeUser);
+callsNamespace.use(socketMiddleware);
+callsNamespace.use(JoinUserToOwnRoom);
 
     private initializeRoutes() {
         this.app.get('/', (req, res) => {
