@@ -45,12 +45,20 @@ class App {
         this.port = process.env.PORT || 5000;
         this.io = new Server(this.server, {
             cors: {
-                origin: ["http://localhost:5173", 'https://whatsapp-mongo.onrender.com', 'https://vchat.nerchuko.in', 'https://admin.socket.io', 'https://whatsapp-chat-imbu.onrender.com'],
+                origin: ["http://localhost:5173", 'https://vchat.nerchuko.in', 'https://admin.socket.io', 'http://localhost:5052', 'https://whatsappapi.nerchuko.in'],
+                methods: ["GET", "POST", "OPTIONS"],
+                allowedHeaders: ["Content-Type", "Authorization", "sessionID", "sessionId", "sessionid"],
+                exposedHeaders: ["sessionID", "sessionId", "sessionid"],
                 credentials: true,
-            }
+            },
+            transports: ['websocket', 'polling'],
+            allowEIO3: true,
+            pingTimeout: 60000,
+            pingInterval: 25000
         });
         this.chatNamespace = this.io.of("/chat");
         this.callsNamespace = this.io.of("/calls");
+        this.connectRedis();
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.handleError();
@@ -60,7 +68,7 @@ class App {
 
     private initializeMiddlewares() {
         const corsOptions: CorsOptions = {
-            origin: ['http://localhost:5173', 'https://whatsapp-mongo.onrender.com', 'https://vchat.nerchuko.in', 'https://whatsapp-chat-imbu.onrender.com'],
+            origin: ['http://localhost:5173', 'https://vchat.nerchuko.in', 'http://localhost:5052', 'https://whatsappapi.nerchuko.in'],
             credentials: true,
             exposedHeaders: ["sessionID", "sessionId", "sessionid"]
         };
