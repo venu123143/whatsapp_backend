@@ -73,11 +73,15 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         as: "messages"
                     }
                 },
-                // Add lastMessage field from messages array
+                // Add lastMessage field from messages array - ensuring it's always present
                 {
                     $addFields: {
                         lastMessage: {
-                            $arrayElemAt: ["$messages", -1]  // Get the last (most recent) message
+                            $cond: {
+                                if: { $gt: [{ $size: "$messages" }, 0] },
+                                then: { $arrayElemAt: ["$messages", -1] },
+                                else: null
+                            }
                         }
                     }
                 },
@@ -118,13 +122,25 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                                             cond: {
                                                 $and: [
                                                     { $eq: ["$$this.seen", false] },
-                                                    { $ne: ["$$this.sender.id", currentUser._id] }
+                                                    { $ne: ["$$this.sender.id", currentUser._id.toString()] }
                                                 ]
                                             }
                                         }
                                     }
                                 },
                                 else: "$unreadCount"  // Keep existing unreadCount for group chats
+                            }
+                        }
+                    }
+                },
+                // Add a sorting field based on lastMessage.date or createdAt
+                {
+                    $addFields: {
+                        sortField: {
+                            $cond: {
+                                if: { $ne: ["$lastMessage", null] },
+                                then: "$lastMessage.date",
+                                else: "$createdAt"
                             }
                         }
                     }
@@ -136,6 +152,8 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         conn_type: 1,
                         messages: 1,
                         lastMessage: 1,
+                        createdAt: 1,
+                        sortField: 1,
                         display_name: {
                             $cond: {
                                 if: { $eq: ["$conn_type", "onetoone"] },
@@ -186,9 +204,9 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
                         unreadCount: 1
                     }
                 },
-                // Sort by last message date
+                // Sort by sortField (either lastMessage.date or createdAt)
                 {
-                    $sort: { "lastMessage.date": -1 }
+                    $sort: { sortField: -1 }
                 },
                 {
                     $limit: 100
@@ -215,7 +233,7 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
     if (!socket.user || socket.user === null) {
         next(new Error("Not Authorized"));
     } else {
-        await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
+        // await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
         if (!userRooms.includes(socket.user.socket_id)) {
             socket.join(socket.user.socket_id);
@@ -282,6 +300,15 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                     callback({ error: `No user exists ` })
                     return
                 }
+                const existingConnection = await Connection.findOne({
+                    conn_type: "onetoone",
+                    users: { $all: [userIds[0], socket.user._id?.toString()] } // Check both users exist in the same connection
+                });
+
+                if (existingConnection) {
+                    callback({ error: "Connection already exists" });
+                    return;
+                }
                 newConnection = new Connection({
                     room_id: new Types.ObjectId().toString(),
                     conn_type: 'onetoone',
@@ -290,6 +317,7 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                     createdBy: socket.user._id
                 });
                 await newConnection.save();
+                callback({ success: "Connection created success" });
                 break;
             case "group":
                 newConnection = new Connection({
@@ -304,7 +332,6 @@ export const createConnection = async (socket: CustomSocket, userIds: string[], 
                 });
                 await newConnection.save();
                 callback({ success: `${connType} created successfully` })
-
                 break;
             default:
                 break;
@@ -451,10 +478,11 @@ export const deleteMessage = async (io: ChatNamespace, socket: CustomSocket, dat
     }
 }
 export const onlineStatus = async (data: any, callback: any) => {
-    const userStatus = await redisClient.hGet(`userId${data.user_id._id}`, 'connected')
+    const userStatus = await redisClient.hGet(`userId${data.user_id}`, 'connected')
+
     if (data.user_id) {
         await ChatModel.updateMany(
-            { "sender.id": data.user_id._id, room_id: new Types.ObjectId(data.room_id) },
+            { "sender.id": data.user_id, room_id: new Types.ObjectId(data.room_id) },
             { seen: true },
         );
     }

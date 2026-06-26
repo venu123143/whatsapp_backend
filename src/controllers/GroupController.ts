@@ -12,10 +12,14 @@ export const createGroup = async (req: Request, res: Response) => {
   const users = JSON.parse(formData.users)
 
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authorized' });
+    }
+    const userId = req.user._id;
 
     const uploader = (path: string) => uploadImage(path);
     const files = req.files as Express.Multer.File[];
-    
+
     let profile = ""
     for (const file of files) {
       const { path } = file;
@@ -24,8 +28,8 @@ export const createGroup = async (req: Request, res: Response) => {
       fs.unlinkSync(path);
     }
 
-    if (!users.includes(req.user?._id)) {
-      users.push(req.user?._id);
+    if (!users.includes(userId)) {
+      users.push(userId);
     }
     console.log(name, profile);
 
@@ -35,8 +39,8 @@ export const createGroup = async (req: Request, res: Response) => {
         socket_id: uuidv4(),
         users: users,
         profile: profile,
-        admins: req.user?._id,
-        createdBy: req.user?._id
+        admins: [userId],
+        createdBy: userId
       })
 
       const populatedGroup = await Group.findById(group._id)
