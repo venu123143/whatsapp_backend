@@ -3,11 +3,13 @@ import asyncHandler from "express-async-handler"
 import { Request, Response, NextFunction } from "express"
 import User, { IUser } from "../models/UserModel";
 import FancyError from "../utils/FancyError"
-
+import { readAccessToken, verifyAccessToken } from "../utils/jwtToken"
 
 export interface JwtPayload {
     _id: string;
+    type?: string;
     iat: number;
+    exp: number;
 }
 
 declare module 'express-serve-static-core' {
@@ -17,44 +19,28 @@ declare module 'express-serve-static-core' {
 }
 
 export const authMiddleware = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    // let token;
-    // if (req?.headers?.authorization?.startsWith("Bearer")) {
-    //     token = req.headers.authorization.split(" ")[1]
-    //     try {
-    //         if (token) {
-    //             const decode = jwt.verify(token, process.env.SECRET_KEY as jwt.Secret) as JwtPayload
-    //             const user = await User.findById(decode._id)
-    //             if (user !== null) {
-    //                 req.user = user;
-    //             }
-    //             next();
-    //         }
-    //     } catch (error) {
-    //         throw new FancyError('not Authorized token expired, please login again', 401)
-    //     }
-    // } else {
-    //     throw new FancyError('No token attached to the header', 404)
-    // }
-    const { loginToken } = req.cookies
-    try {
-        const decode = jwt.verify(loginToken, process.env.SECRET_KEY as jwt.Secret) as JwtPayload
-        const user = await User.findById(decode._id);
-        if (user !== null) {
-            req.user = user;
-            next();
-        }
-    } catch (error) {
-        throw new FancyError('not Authorized, token expired..!, please login again', 401)
+    const token = readAccessToken(req)
+    if (!token) {
+        throw new FancyError('No access token provided, please login again', 401, 'ACCESS_TOKEN_MISSING')
     }
+
+    let decoded: JwtPayload
+    try {
+        decoded = verifyAccessToken(token)
+    } catch (error) {
+        // the client tells these two apart: only an expired token is worth refreshing.
+        if (error instanceof jwt.TokenExpiredError) {
+            throw new FancyError('Access token expired', 401, 'ACCESS_TOKEN_EXPIRED')
+        }
+        throw new FancyError('Not authorized, invalid token. Please login again', 401, 'ACCESS_TOKEN_INVALID')
+    }
+
+    const user = await User.findById(decoded._id)
+    if (!user) {
+        // previously this branch never called next(), so the request hung forever.
+        throw new FancyError('User no longer exists, please login again', 401, 'USER_NOT_FOUND')
+    }
+
+    req.user = user
+    next()
 })
-
-// export const isAdmin = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-//     const { email } = req.user as IUser
-//     const adminUser = await User.findOne({ email })
-//     if (adminUser?.role !== "admin") {
-//         throw new FancyError("You are not an admin", 401)
-//     } else {
-//         next();
-//     }
-// })
-

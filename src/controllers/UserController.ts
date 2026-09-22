@@ -1,10 +1,17 @@
 import { Request, Response } from "express";
-import { UAParser } from "ua-parser-js"
 import User from "../models/UserModel";
 import { v4 as uuidv4 } from 'uuid';
 import FancyError from "../utils/FancyError";
 import { signUpSchema, loginSchema } from "../middleware/JoiSchemas"
-import jwtToken from "../utils/jwtToken";
+import {
+  REFRESH_COOKIE,
+  clearAuthCookies,
+  issueTokenPair,
+  revokeAllRefreshTokens,
+  revokeRefreshToken,
+  rotateRefreshToken,
+  setAuthCookies,
+} from "../utils/jwtToken";
 import asyncHandler from "express-async-handler"
 import { uploadImage } from "../utils/Cloudinary";
 import fs from "fs"
@@ -13,7 +20,7 @@ import axios from "axios";
 import userHelper from "../helpers/user.helper";
 
 // const client = Twilio(process.env.ACCOUNT_SID, process.env.ACCOUNT_TOKEN);
-import { getSession, setSession, removeSession } from "../utils/session"
+import { getSession, setSession, removeSession, saveSession } from "../utils/session"
 import { MemoryStore, SessionData, Session } from "express-session";
 import { deleteFileFromS3, getFileUrlFromS3, uploadFileToS3 } from "../utils/S3Storage";
 //joi validation
@@ -29,27 +36,42 @@ declare module 'express-serve-static-core' {
 
 }
 
+const OTP_PROVIDER_URL = "https://api.oncemore.io/auth";
+// without a timeout a stalled provider holds the request (and a connection) open forever.
+const OTP_REQUEST_TIMEOUT_MS = 10_000;
+
+/** A provider that is unreachable is a 503, not a rejected OTP. */
+const providerUnavailable = (error: any) =>
+  new FancyError(
+    "Verification service is temporarily unavailable, please try again",
+    503,
+    "OTP_PROVIDER_UNAVAILABLE"
+  );
+
 const sendOtpToMobile = async (mobile: string) => {
   try {
-    const msg = await axios.post(`https://api.oncemore.io/auth/mobile-signin`, {
+    return await axios.post(`${OTP_PROVIDER_URL}/mobile-signin`, {
       mobileNumber: userHelper.formatMobileNumber(mobile)
-    })
-    return msg;
-  } catch (error) {
-    return error;
+    }, { timeout: OTP_REQUEST_TIMEOUT_MS })
+  } catch (error: any) {
+    console.error(`[otp] send failed: ${error?.message}`);
+    if (!error?.response) throw providerUnavailable(error);
+    return null;
   }
 };
 
 const verifyOtpFromMobile = async (mobile: string, otp: string) => {
   try {
-    const msg = await axios.post(`https://api.oncemore.io/auth/verify-otp`, {
+    return await axios.post(`${OTP_PROVIDER_URL}/verify-otp`, {
       otp: otp,
       mobileNumber: userHelper.formatMobileNumber(mobile),
       name: mobile
-    })
-    return msg;
-  } catch (error) {
-    return error;
+    }, { timeout: OTP_REQUEST_TIMEOUT_MS })
+  } catch (error: any) {
+    console.error(`[otp] verification failed: ${error?.message}`);
+    // a 4xx means the code was wrong; anything else means the provider is down.
+    if (!error?.response) throw providerUnavailable(error);
+    return null;
   }
 };
 
@@ -65,6 +87,10 @@ export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) =>
     const otpCreatedAt = moment().unix();
     req.session.userDetails = { sentAt: otpCreatedAt, mobile: mobile };
 
+    // store the session first: an OTP we cannot verify later is worse than no OTP,
+    // and this turns a session store outage into an honest 503.
+    await saveSession(req);
+
     // Send the SMS (await if it's an async operation)
     await sendOtpToMobile(mobile);
 
@@ -75,8 +101,9 @@ export const SendOtpViaSms = asyncHandler(async (req: Request, res: Response) =>
       message: `Verification code sent to ${mobile}. Valid for the next 10 mins.`,
     });
   } catch (error: any) {
-    // Catch any errors and send a 500 error response
-    res.status(500).json({ success: false, message: error.message });
+    if (error instanceof FancyError) throw error;
+    // a bad mobile number is the caller's fault, not a server failure.
+    throw new FancyError(error.message, error?.isJoi ? 400 : 500);
   }
 })
 
@@ -93,50 +120,66 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   if (!otpResult?.data) {
     throw new FancyError("OTP incorrect or timeout, Try Again.", 403)
   }
+
   let user = await User.findOne({ mobile: session.userDetails.mobile });
+  if (!user) {
+    user = await User.create({ mobile: session.userDetails.mobile, socket_id: uuidv4() });
+  }
 
+  // a fresh login starts a new refresh token family for this device.
+  const tokens = await issueTokenPair(user, req);
+  await removeSession(req.headers.sessionid as string);
+
+  setAuthCookies(res, tokens);
+  res.status(200).json({
+    user,
+    success: true,
+    message: "user logged in sucessfully"
+  })
+})
+
+/**
+ * Exchanges the 45 day refresh cookie for a new access token.
+ * The presented refresh token is single use: it is burned here and replaced,
+ * and replaying it revokes every token issued from the same login.
+ */
+export const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
+  const presented = req.cookies?.[REFRESH_COOKIE];
   try {
-    // CREATE ACCESS, REFRESH TOKENS AND SETUP COOKIES
-    if (!user) {
-      user = await User.create({ mobile: session.userDetails.mobile, socket_id: uuidv4() });
-    }
-    const deviceInfo = req.headers['user-agent'];
-    const parser = new UAParser(deviceInfo);
-    const token = await jwtToken(user)
-
-    const safari = parser.getBrowser().name?.toLowerCase().includes('safari')
-    let sameSite = safari ? "strict" : 'none'
-
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + 3); // Add 3 days
-    const options: any = {
-      expires: expirationDate,
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? sameSite : 'strict',
-    }
-    await removeSession(req.headers.sessionid as string);
-    res.status(200).cookie('loginToken', token, options).json({
-      user,
-      sucess: true,
-      message: "user logged in sucessfully"
-    })
-  } catch (error: any) {
-    throw new FancyError("OTP incorrect or timeout, Try Again", 403)
+    const { user, accessToken, refreshToken } = await rotateRefreshToken(presented, req);
+    setAuthCookies(res, { accessToken, refreshToken });
+    res.status(200).json({ user, success: true, message: "session refreshed" });
+  } catch (error) {
+    // the cookie is worthless now, do not leave it in the browser.
+    clearAuthCookies(res);
+    throw error;
   }
 })
+
+/** Current user for the session, used by the client to rehydrate on page load. */
+export const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
+  res.status(200).json({ user: req.user, success: true });
+})
+
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
-  const cookies = req.cookies
-  if (!cookies.loginToken) {
-    throw new FancyError('No refresh token in cookies, Login again', 404)
-  }
-
-  await User.findOneAndUpdate({ refreshToken: cookies?.loginToken }, { refreshToken: "" })
-  res.clearCookie('loginToken', { path: '/' }).json({ message: 'User logged out successfully', success: true });
-
+  // idempotent: a stale or missing cookie still ends up logged out.
+  await revokeRefreshToken(req.cookies?.[REFRESH_COOKIE]);
+  clearAuthCookies(res);
+  res.status(200).json({ message: 'User logged out successfully', success: true });
 })
+
+/** Ends every session of the logged in user, on all devices. */
+export const logoutAllDevices = asyncHandler(async (req: Request, res: Response) => {
+  await revokeAllRefreshTokens(String(req.user?._id));
+  clearAuthCookies(res);
+  res.status(200).json({ message: 'Logged out from all devices', success: true });
+})
+
 export const UpdateUser = asyncHandler(async (req: Request, res: Response) => {
   const _id = req.params.id;
+  if (String(req.user?._id) !== _id) {
+    throw new FancyError("You can only update your own profile", 403)
+  }
   const name = req.body?.name;
   const about = req.body?.about;
   const profile = req.body?.profile;
@@ -156,11 +199,14 @@ export const UpdateUser = asyncHandler(async (req: Request, res: Response) => {
   }
 })
 
-export const updateProfile = async (req: Request, res: Response) => {
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id
+  if (String(req.user?._id) !== id) {
+    throw new FancyError("You can only update your own profile", 403)
+  }
   try {
     const uploader = (path: string) => uploadImage(path);
     const files = req.files as Express.Multer.File[];
-    const id = req.params.id
     let profile = ""
     for (const file of files) {
       const { path } = file;
@@ -171,9 +217,9 @@ export const updateProfile = async (req: Request, res: Response) => {
     const result = await User.findOneAndUpdate({ _id: id }, { profile }, { new: true });
     res.json(result)
   } catch (error: any) {
-    throw new Error(error);
+    throw new FancyError(error?.message || "Unable to update the profile picture", 400);
   }
-};
+})
 
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
   const loggedInUserId = req.user?._id
