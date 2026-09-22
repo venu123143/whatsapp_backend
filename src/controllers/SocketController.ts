@@ -18,6 +18,13 @@ export interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap,
 export interface IO extends Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> { }
 export interface ChatNamespace extends Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> { }
 
+/** Same tag as the handshake middleware, so the client stops retrying an auth failure. */
+const socketAuthError = (message: string): ExtendedError => {
+    const error = new Error(message) as ExtendedError;
+    error.data = { code: "SOCKET_AUTH_FAILED" };
+    return error;
+};
+
 export const getAllMessages = async (socket: CustomSocket, callback: any) => {
     try {
         const currentUser = socket.user;
@@ -231,7 +238,7 @@ export const getAllMessages = async (socket: CustomSocket, callback: any) => {
 
 export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
     if (!socket.user || socket.user === null) {
-        next(new Error("Not Authorized"));
+        next(socketAuthError("Not Authorized"));
     } else {
         // await redisClient.hSet(`userId${socket?.user?.socket_id}`, { "userId": socket?.user?.socket_id.toString(), "connected": "true" });
         const userRooms = Array.from(socket.rooms);
@@ -246,7 +253,7 @@ export const authorizeUser = async (socket: CustomSocket, next: (err?: ExtendedE
 
 export const JoinUserToOwnRoom = async (socket: CustomSocket, next: (err?: ExtendedError | undefined) => void) => {
     if (!socket.user || socket.user === null) {
-        next(new Error("Not Authorized"));
+        next(socketAuthError("Not Authorized"));
     } else {
         // const userRooms = Array.from(socket.rooms);
         // if (!userRooms.includes(socket.user.socket_id)) {
